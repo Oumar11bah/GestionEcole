@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.env
+*.egg-info/
+.eggs/
+dist/
+/build/
+*.egg
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Frontend source (only keep build/)
+frontend/*
+!frontend/build/
+!frontend/.gitignore
+
+# Logs
+*.log
+server.log
+server.err
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Translations
+*.pot
+*.mo

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte d'élève - {{ student.matricule }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card-container {
+            background: white;
+            width: 85.6mm;
+            height: 53.98mm;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35px;
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+        }
+
+        .header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 8px;
+        }
+
+        .school-name {
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .card-title {
+            color: white;
+            font-size: 9px;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .content {
+            display: flex;
+            margin-top: 10px;
+            gap: 10px;
+        }
+
+        .photo {
+            width: 65px;
+            height: 80px;
+            border: 2px solid #4F46E5;
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo .placeholder {
+            width: 100%;
+            height: 100%;
+            background: #E5E7EB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9CA3AF;
+            font-size: 24px;
+        }
+
+        .info {
+            flex: 1;
+            font-size: 8px;
+        }
+
+        .info-row {
+            margin-bottom: 4px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #4F46E5;
+            font-size: 7px;
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            color: #1F2937;
+            font-size: 9px;
+        }
+
+        .matricule-bar {
+            margin-top: 8px;
+            padding: 3px 6px;
+            background: #F3F4F6;
+            border-radius: 3px;
+            font-size: 7px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .matricule-number {
+            font-weight: bold;
+            font-family: monospace;
+            color: #4F46E5;
+        }
+
+        .academic-year {
+            color: #6B7280;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 25px;
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 6px;
+        }
+
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4F46E5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .print-btn:hover {
+            background: #4338CA;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .print-btn {
+                display: none !important;
+            }
+
+            .cards-grid {
+                gap: 10mm;
+            }
+
+            .card-container {
+                box-shadow: none;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">Imprimer</button>
+
+    <div class="cards-grid">
+        <div class="card-container">
+            <div class="header">
+                <div class="school-name">EduManager</div>
+                <div class="card-title">CARTE D'ÉLÈVE</div>
+            </div>
+
+            <div class="content">
+                <div class="photo">
+                    {% if student.photo %}
+                        <img src="{{ student.photo.url }}" alt="Photo">
+                    {% else %}
+                        <div class="placeholder">👤</div>
+                    {% endif %}
+                </div>
+                <div class="info">
+                    <div class="info-row">
+                        <div class="info-label">Nom & Prénom</div>
+                        <div class="info-value">{{ student.last_name }} {{ student.first_name }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Date de naissance</div>
+                        <div class="info-value">{{ student.date_of_birth|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Classe</div>
+                        <div class="info-value">{{ student.class_assigned.name|default:"Non assignée" }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Parent/Tuteur</div>
+                        <div class="info-value">{{ student.parent.full_name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="matricule-bar">
+                <span class="info-label">Matricule</span>
+                <span class="matricule-number">{{ student.matricule }}</span>
+                <span class="academic-year">{{ academic_year }}</span>
+            </div>
+
+            <div class="footer">
+                Année Scolaire {{ academic_year }} - École Privée
+            </div>
+        </div>
+
+        {% if duplicate %}
+        <div class="card-container">
+            <div class="header">
+                <div class="school-name">EduManager</div>
+                <div class="card-title">CARTE D'ÉLÈVE</div>
+            </div>
+
+            <div class="content">
+                <div class="photo">
+                    {% if student.photo %}
+                        <img src="{{ student.photo.url }}" alt="Photo">
+                    {% else %}
+                        <div class="placeholder">👤</div>
+                    {% endif %}
+                </div>
+                <div class="info">
+                    <div class="info-row">
+                        <div class="info-label">Nom & Prénom</div>
+                        <div class="info-value">{{ student.last_name }} {{ student.first_name }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Date de naissance</div>
+                        <div class="info-value">{{ student.date_of_birth|date:"d/m/Y" }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Classe</div>
+                        <div class="info-value">{{ student.class_assigned.name|default:"Non assignée" }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Parent/Tuteur</div>
+                        <div class="info-value">{{ student.parent.full_name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="matricule-bar">
+                <span class="info-label">Matricule</span>
+                <span class="matricule-number">{{ student.matricule }}</span>
+                <span class="academic-year">{{ academic_year }}</span>
+            </div>
+
+            <div class="footer">
+                Année Scolaire {{ academic_year }} - École Privée
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+{
+  "index.html": {
+    "file": "index-DjgfGp4H.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/html2canvas/dist/html2canvas.esm.js",
+      "node_modules/dompurify/dist/purify.es.mjs",
+      "node_modules/canvg/lib/index.es.js"
+    ],
+    "css": [
+      "index-C5B3FJow.css"
+    ],
+    "assets": [
+      "LOG-KjicOvPi.png",
+      "conf-C6OhJMUa.png",
+      "Generated Image February 23_ 2026 - 4_57PM-Adv8r0RQ.png",
+      "images-CFIfhlG2.jpeg",
+      "zxy-DhgmVjix.png"
+    ]
+  },
+  "node_modules/canvg/lib/index.es.js": {
+    "file": "index.es-CtpTwzmV.js",
+    "name": "index.es",
+    "src": "node_modules/canvg/lib/index.es.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "node_modules/dompurify/dist/purify.es.mjs": {
+    "file": "purify.es-BaNf_EpD.js",
+    "name": "purify.es",
+    "src": "node_modules/dompurify/dist/purify.es.mjs",
+    "isDynamicEntry": true
+  },
+  "node_modules/html2canvas/dist/html2canvas.esm.js": {
+    "file": "html2canvas.esm-CBrSDip1.js",
+    "name": "html2canvas.esm",
+    "src": "node_modules/html2canvas/dist/html2canvas.esm.js",
+    "isDynamicEntry": true
+  },
+  "src/assets/Generated Image February 23, 2026 - 4_57PM.png": {
+    "file": "Generated Image February 23_ 2026 - 4_57PM-Adv8r0RQ.png",
+    "src": "src/assets/Generated Image February 23, 2026 - 4_57PM.png"
+  },
+  "src/assets/LOG.png": {
+    "file": "LOG-KjicOvPi.png",
+    "src": "src/assets/LOG.png"
+  },
+  "src/assets/conf.png": {
+    "file": "conf-C6OhJMUa.png",
+    "src": "src/assets/conf.png"
+  },
+  "src/assets/images.jpeg": {
+    "file": "images-CFIfhlG2.jpeg",
+    "src": "src/assets/images.jpeg"
+  },
+  "src/assets/zxy.png": {
+    "file": "zxy-DhgmVjix.png",
+    "src": "src/assets/zxy.png"
+  }
+}
