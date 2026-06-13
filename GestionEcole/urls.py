@@ -1,5 +1,5 @@
 """
-URL configuration for edumanager_project project.
+URL configuration for GestionEcole project.
 """
 from django.contrib import admin
 from django.urls import path, include, re_path

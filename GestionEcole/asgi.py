@@ -1,5 +1,5 @@
 """
-ASGI config for edumanager_project project.
+ASGI config for GestionEcole project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

@@ -1,29 +1,27 @@
 """
-Django settings for edumanager_project project.
+Django settings for GestionEcole project.
 """
 
 from pathlib import Path
 import os
 from datetime import timedelta
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file
+# Load .env file
 try:
     from dotenv import load_dotenv
     load_dotenv(os.path.join(BASE_DIR, '.env'))
 except ImportError:
     pass
 
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.pythonanywhere.com').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.pythonanywhere.com').split(',')
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,https://*.pythonanywhere.com').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000,https://*.onrender.com,https://*.pythonanywhere.com').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -97,13 +95,15 @@ TEMPLATES = [
 WSGI_APPLICATION = 'GestionEcole.wsgi.application'
 
 # Database
-USE_POSTGRESQL = os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true'
-
-if USE_POSTGRESQL:
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
+elif os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'edumanager_db'),
+            'NAME': os.environ.get('DB_NAME', 'gestionecole_db'),
             'USER': os.environ.get('DB_USER', 'postgres'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
             'HOST': os.environ.get('DB_HOST', 'localhost'),
@@ -202,6 +202,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',')
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://.*\.onrender\.com$',
     r'^https://.*\.pythonanywhere\.com$',
 ]
 CORS_ALLOW_CREDENTIALS = True

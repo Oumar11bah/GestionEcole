@@ -4,7 +4,7 @@ from accounts.models import UserProfile
 
 DEFAULT_ADMIN = {
     'username': 'admin',
-    'email': 'admin@edumanager.com',
+    'email': 'admin@gestionecole.com',
     'first_name': 'Administrateur',
     'last_name': 'Systeme',
     'password': 'admin123',

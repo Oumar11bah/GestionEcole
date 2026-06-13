@@ -3,7 +3,7 @@ import os
 import sys
 import django
 
-sys.path.append('/edumanager')
+sys.path.append('/GestionEcole')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'GestionEcole.settings')
 django.setup()
 

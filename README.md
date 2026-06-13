@@ -1,4 +1,4 @@
-# EduManager - Système de Gestion d'École Privée
+# GestionEcole - Système de Gestion d'École Privée
 
 Application web complète pour la gestion des écoles privées (primaire, collège, lycée).
 
@@ -35,7 +35,7 @@ Application web complète pour la gestion des écoles privées (primaire, collè
 ### 1. Backend (Django)
 
 ```bash
-cd /edumanager
+cd /GestionEcole
 venv/Scripts/activate
 pip install -r requirements.txt  # (à créer)
 python manage.py migrate
@@ -45,7 +45,7 @@ python manage.py runserver 8000
 ### 2. Frontend (React)
 
 ```bash
-cd /edumanager/frontend
+cd /GestionEcole/frontend
 npm install
 npm run dev
 ```
@@ -53,7 +53,7 @@ npm run dev
 ### 3. Démarrage rapide (Windows)
 
 ```powershell
-cd /edumanager
+cd /GestionEcole
 ./start_dev.ps1
 ```
 
@@ -64,7 +64,7 @@ Par défaut, SQLite est utilisé pour le développement. Pour utiliser PostgreSQ
 
 ```bash
 set USE_POSTGRESQL=true
-set DB_NAME=edumanager_db
+set DB_NAME=gestionecole_db
 set DB_USER=postgres
 set DB_PASSWORD=votre_mot_de_passe
 set DB_HOST=localhost
@@ -82,8 +82,8 @@ set DB_PORT=5432
 ## Structure du projet
 
 ```
-/edumanager
-├── edumanager_project/    # Configuration Django principale
+/GestionEcole
+├── GestionEcole/           # Configuration Django principale
 ├── accounts/              # Gestion des utilisateurs
 ├── students/              # Gestion des élèves
 ├── teachers/              # Gestion des enseignants
