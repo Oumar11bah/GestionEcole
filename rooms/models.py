@@ -1,16 +1,17 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 class Room(models.Model):
     ROOM_TYPE_CHOICES = [
-        ('normal', 'Normale'),
-        ('computer', 'Informatique'),
-        ('laboratory', 'Laboratoire'),
-        ('library', 'Bibliothèque'),
+        ('normal', _('Normale')),
+        ('computer', _('Informatique')),
+        ('laboratory', _('Laboratoire')),
+        ('library', _('Bibliothèque')),
     ]
     STATUS_CHOICES = [
-        ('available', 'Disponible'),
-        ('occupied', 'Occupée'),
-        ('maintenance', 'En maintenance'),
+        ('available', _('Disponible')),
+        ('occupied', _('Occupée')),
+        ('maintenance', _('En maintenance')),
     ]
 
     name = models.CharField(max_length=100)
@@ -20,7 +21,7 @@ class Room(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     building = models.CharField(max_length=100, blank=True)
     floor = models.IntegerField(null=True, blank=True)
-    equipment = models.TextField(blank=True, help_text="Liste des équipements")
+    equipment = models.TextField(blank=True, help_text=_("Liste des équipements"))
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
