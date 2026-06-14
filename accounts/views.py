@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User
@@ -25,6 +25,52 @@ import secrets
 import json
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def setup_admin(request):
+    if User.objects.filter(is_superuser=True).exists():
+        return Response(
+            {'error': 'Un administrateur existe déjà. Connectez-vous pour créer d\'autres utilisateurs.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    username = request.data.get('username', '').strip()
+    password = request.data.get('password', '')
+    confirm_password = request.data.get('confirm_password', '')
+    first_name = request.data.get('first_name', '').strip()
+    last_name = request.data.get('last_name', '').strip()
+
+    if not username or not password:
+        return Response({'error': 'Nom d\'utilisateur et mot de passe requis.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if password != confirm_password:
+        return Response({'error': 'Les mots de passe ne correspondent pas.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if len(password) < 6:
+        return Response({'error': 'Le mot de passe doit contenir au moins 6 caractères.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username=username).exists():
+        return Response({'error': 'Ce nom d\'utilisateur existe déjà.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.create_superuser(
+            username=username,
+            password=password,
+            first_name=first_name or username,
+            last_name=last_name or '',
+        )
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.role = 'admin'
+        profile.save()
+
+        return Response({
+            'message': 'Administrateur créé avec succès. Vous pouvez maintenant vous connecter.',
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 def generate_password(length=12):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(secrets.choice(chars) for _ in range(length))
@@ -33,7 +79,7 @@ def generate_password(length=12):
 def log_activity(user, action, module, description, request=None):
     ActivityLog.objects.create(
         user=user,
-        username=user.get_full_name() or user.username,
+        username=user.get_full_name() or user.username if user else 'Système',
         action=action,
         module=module,
         description=description,
@@ -42,13 +88,69 @@ def log_activity(user, action, module, description, request=None):
     )
 
 
-MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_DURATION_MINUTES = 15
+MAX_NORMAL_ATTEMPTS = 5
+LOCKOUT_DURATION_SECONDS = 30
+BONUS_ATTEMPTS = 2
+MAX_FAILURES_BEFORE_BLOCK = MAX_NORMAL_ATTEMPTS + BONUS_ATTEMPTS  # 7
 
 from rest_framework.throttling import AnonRateThrottle
 
 class LoginRateThrottle(AnonRateThrottle):
-    rate = '5/minute'
+    rate = '30/minute'
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def login_state(request):
+    username = request.query_params.get('username', '')
+    if not username:
+        return Response({'state': 'clean'})
+
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({'state': 'clean'})
+
+    ip_address = request.META.get('REMOTE_ADDR', '')
+    school_info = None
+
+    if not user.is_active:
+        from school.models import SchoolInfo
+        school_info = SchoolInfo.objects.first()
+        return Response({
+            'state': 'blocked',
+            'blocked': True,
+            'error': 'Compte temporairement bloqué',
+            'admin_contact': {
+                'phone': school_info.phone if school_info else '',
+                'email': school_info.email if school_info else '',
+            }
+        })
+
+    try:
+        lockout = LoginLockout.objects.get(user=user, ip_address=ip_address)
+        remaining = max(0, MAX_FAILURES_BEFORE_BLOCK - lockout.attempts)
+
+        if lockout.locked_until and lockout.locked_until > timezone.now():
+            remaining_seconds = int((lockout.locked_until - timezone.now()).total_seconds())
+            return Response({
+                'state': 'locked',
+                'locked': True,
+                'lockout_seconds': remaining_seconds,
+                'error': f"Requête ralentie. Disponible à nouveau dans {remaining_seconds} seconde(s).",
+            })
+
+        if lockout.attempts >= MAX_FAILURES_BEFORE_BLOCK:
+            return Response({
+                'state': 'blocked',
+                'blocked': True,
+                'error': 'Compte bloqué après plusieurs tentatives échouées',
+            })
+    except LoginLockout.DoesNotExist:
+        pass
+
+    return Response({'state': 'clean'})
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_classes = [LoginRateThrottle]
@@ -57,37 +159,57 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         username = request.data.get('username', '')
         ip_address = request.META.get('REMOTE_ADDR', '')
+        from school.models import SchoolInfo
 
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
             user = None
 
+        # Permanently blocked user
+        if user and not user.is_active:
+            school_info = SchoolInfo.objects.first()
+            return Response({
+                'error': 'Compte bloqué après plusieurs tentatives échouées',
+                'blocked': True,
+                'attempts_remaining': 0,
+                'admin_contact': {
+                    'phone': school_info.phone if school_info else '',
+                    'email': school_info.email if school_info else '',
+                }
+            }, status=status.HTTP_403_FORBIDDEN)
+
         lockout = None
         if user:
             try:
                 lockout = LoginLockout.objects.get(user=user, ip_address=ip_address)
+
+                # Active temp lockout (45s delay)
                 if lockout.locked_until and lockout.locked_until > timezone.now():
-                    remaining = int((lockout.locked_until - timezone.now()).total_seconds() // 60)
+                    remaining_seconds = int((lockout.locked_until - timezone.now()).total_seconds())
                     LoginAttempt.objects.create(
                         user=user, username=username, ip_address=ip_address,
                         user_agent=request.META.get('HTTP_USER_AGENT', ''),
                         successful=False
                     )
-                    return Response(
-                        {'error': f'Compte verrouillé. Réessayez dans {remaining} minute(s).'},
-                        status=status.HTTP_423_LOCKED
-                    )
+                    return Response({
+                        'error': f"Requête ralentie. Disponible à nouveau dans {remaining_seconds} seconde(s).",
+                        'locked': True,
+                        'lockout_seconds': remaining_seconds,
+                    }, status=status.HTTP_423_LOCKED)
+
+                # Lockout expired — unlock and let them try bonus attempts
                 elif lockout.locked_until and lockout.locked_until <= timezone.now():
-                    lockout.attempts = 0
                     lockout.locked_until = None
                     lockout.save()
             except LoginLockout.DoesNotExist:
                 pass
 
+        # Attempt authentication
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
+            # Login success — reset everything
             if lockout:
                 lockout.attempts = 0
                 lockout.locked_until = None
@@ -105,24 +227,91 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 notify_admins('login',
                     f"{user.get_full_name() or user.username} ({role_display}) s'est connecté",
                     f"Connexion de {user.get_full_name() or user.username} ({role_display})")
-        else:
-            LoginAttempt.objects.create(
-                user=user, username=username, ip_address=ip_address,
-                user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                successful=False
-            )
-            if user:
-                lockout_obj, created = LoginLockout.objects.get_or_create(
-                    user=user, ip_address=ip_address,
-                    defaults={'attempts': 1}
-                )
-                if not created:
-                    lockout_obj.attempts += 1
-                    if lockout_obj.attempts >= MAX_LOGIN_ATTEMPTS:
-                        lockout_obj.locked_until = timezone.now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
-                    lockout_obj.save()
+            return response
 
-        return response
+        # --- Login failed ---
+        LoginAttempt.objects.create(
+            user=user, username=username, ip_address=ip_address,
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            successful=False
+        )
+
+        if user:
+            lockout_obj, created = LoginLockout.objects.get_or_create(
+                user=user, ip_address=ip_address,
+                defaults={'attempts': 1}
+            )
+            if not created:
+                lockout_obj.attempts += 1
+                lockout_obj.save()
+
+            attempts = lockout_obj.attempts
+            remaining = max(0, MAX_FAILURES_BEFORE_BLOCK - attempts)
+            is_last_attempt = (remaining == 1)
+
+            if attempts > MAX_FAILURES_BEFORE_BLOCK:
+                # Permanent block
+                user.is_active = False
+                user.save()
+                log_activity(None, 'other', 'Sécurité',
+                    f"Blocage automatique du compte {user.username} après {attempts} échecs de connexion depuis {ip_address}",
+                    request)
+                from .notifications import notify_admins
+                notify_admins('security',
+                    f"🔒 Compte bloqué : {user.get_full_name() or user.username}",
+                    f"Le compte {user.username} a été automatiquement bloqué après {attempts} tentatives échouées depuis {ip_address}.")
+                school_info = SchoolInfo.objects.first()
+                return Response({
+                    'error': 'Compte bloqué après plusieurs tentatives échouées',
+                    'blocked': True,
+                    'attempts_remaining': 0,
+                    'admin_contact': {
+                        'phone': school_info.phone if school_info else '',
+                        'email': school_info.email if school_info else '',
+                    }
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            if attempts == MAX_NORMAL_ATTEMPTS + 1:
+                # Trigger 30s lockout
+                lockout_obj.locked_until = timezone.now() + timedelta(seconds=LOCKOUT_DURATION_SECONDS)
+                lockout_obj.save()
+                return Response({
+                    'error': f"Requête ralentie. Disponible à nouveau dans {LOCKOUT_DURATION_SECONDS} secondes.",
+                    'locked': True,
+                    'lockout_seconds': LOCKOUT_DURATION_SECONDS,
+                    'attempts_remaining': BONUS_ATTEMPTS,
+                }, status=status.HTTP_423_LOCKED)
+
+            # Normal or bonus-zone failure
+            err_msg = "Nom d'utilisateur ou mot de passe incorrect"
+            if attempts > MAX_NORMAL_ATTEMPTS:
+                err_msg = f"Tentative échouée. Il vous reste {remaining} tentative(s)."
+
+            response_data = {
+                'error': err_msg,
+                'attempts_remaining': remaining,
+                'locked': False,
+                'is_last_attempt': is_last_attempt if attempts > MAX_NORMAL_ATTEMPTS else False,
+            }
+            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
+
+        # User doesn't exist in DB — generic error
+        return Response({
+            'error': "Nom d'utilisateur ou mot de passe incorrect",
+            'attempts_remaining': 0,
+            'locked': False,
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_contact(request):
+    from school.models import SchoolInfo
+    school_info = SchoolInfo.objects.first()
+    return Response({
+        'phone': school_info.phone if school_info else '',
+        'email': school_info.email if school_info else '',
+    })
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -409,6 +598,28 @@ class UserViewSet(viewsets.ModelViewSet):
                 'last_activity': p.last_activity,
             })
         return Response(data)
+
+    @action(detail=True, methods=['post'])
+    def unblock(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+
+        LoginLockout.objects.filter(user=user).delete()
+
+        log_activity(request.user, 'update', 'Sécurité',
+                   f"A débloqué le compte de {user.get_full_name() or user.username}", request)
+        from .notifications import notify_admins
+        notify_admins('security',
+            f"🔓 Compte débloqué : {user.get_full_name() or user.username}",
+            f"Le compte {user.username} a été débloqué par {request.user.get_full_name() or request.user.username}.")
+
+        profile = UserProfile.objects.get(user=user)
+        return Response({
+            'message': f"Compte de {user.get_full_name() or user.username} débloqué avec succès.",
+            'user': UserSerializer(user).data,
+            'profile': UserProfileSerializer(profile, context={'request': request}).data,
+        })
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):

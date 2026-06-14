@@ -113,22 +113,12 @@ elif os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true':
         }
     }
 else:
-        DATABASES = {
-                'default': {
-                        'ENGINE': 'django.db.backends.sqlite3',
-                        'NAME': BASE_DIR / 'db.sqlite3',
-                }
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
-        DATABASES = {
-                'default': {
-                        'ENGINE': 'django.db.backends.sqlite3',
-                        'NAME': BASE_DIR / 'db.sqlite3',
-                }
-        }
-        DATABASES = {
-                'default': { dj_database_url.config(('DATABASE_URL'))
-                }
-        }
+    }
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -180,9 +170,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '10/hour',
-        'user': '1000/hour',
-        'login': '5/minute',
+        'anon': '100/hour',
+        'user': '10000/hour',
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 200
