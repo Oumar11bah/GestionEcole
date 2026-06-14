@@ -18,6 +18,28 @@ class AcademicYear(models.Model):
             AcademicYear.objects.filter(is_active=True).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
 
+class Semester(models.Model):
+    name = models.CharField(max_length=50, help_text="Ex: Semestre 1, Trimestre 1")
+    academic_year = models.ForeignKey(AcademicYear, on_delete=models.CASCADE, related_name='semesters')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0, help_text="Ordre d'affichage")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Semestre"
+        verbose_name_plural = "Semestres"
+        ordering = ['academic_year', 'order']
+
+    def __str__(self):
+        return f"{self.name} ({self.academic_year})"
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            Semester.objects.filter(academic_year=self.academic_year, is_active=True).exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+
 class SchoolInfo(models.Model):
     name = models.CharField(max_length=200, default="École")
     acronym = models.CharField(max_length=20, blank=True, help_text="Sigle de l'école")

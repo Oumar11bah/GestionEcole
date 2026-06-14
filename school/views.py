@@ -2,8 +2,8 @@ from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import AcademicYear, SchoolInfo
-from .serializers import AcademicYearSerializer, SchoolInfoSerializer
+from .models import AcademicYear, SchoolInfo, Semester
+from .serializers import AcademicYearSerializer, SchoolInfoSerializer, SemesterSerializer
 from accounts.permissions import CanManageSchool
 
 class AcademicYearViewSet(viewsets.ModelViewSet):
@@ -12,9 +12,9 @@ class AcademicYearViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_destroy(self, instance):
-        if self.request.user.profile.role != 'super_admin':
+        if self.request.user.profile.role not in ('super_admin', 'admin'):
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Seul un Super Admin peut supprimer une année scolaire")
+            raise PermissionDenied("Seul un administrateur peut supprimer une année scolaire")
         year_name = instance.name
         with transaction.atomic():
             from registrations.models import Registration
@@ -60,3 +60,15 @@ class SchoolInfoViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return super().update(request, *args, **kwargs)
+
+class SemesterViewSet(viewsets.ModelViewSet):
+    queryset = Semester.objects.all()
+    serializer_class = SemesterSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        year = self.request.query_params.get('academic_year')
+        if year:
+            qs = qs.filter(academic_year__name=year)
+        return qs

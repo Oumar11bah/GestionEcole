@@ -1,10 +1,17 @@
 from rest_framework import serializers
-from .models import AcademicYear, SchoolInfo
+from .models import AcademicYear, SchoolInfo, Semester
 
 class AcademicYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicYear
         fields = ['id', 'name', 'is_active', 'created_at']
+
+class SemesterSerializer(serializers.ModelSerializer):
+    academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
+
+    class Meta:
+        model = Semester
+        fields = ['id', 'name', 'academic_year', 'academic_year_name', 'start_date', 'end_date', 'is_active', 'order', 'created_at']
 
 class SchoolInfoSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
