@@ -141,7 +141,11 @@ const Bulletins = () => {
             <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
               <option value="">{t('bulletins.select')}</option>
-              {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {terms.length === 0 ? (
+                <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
+              ) : (
+                terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+              )}
             </select>
           </div>
           <div className="relative">

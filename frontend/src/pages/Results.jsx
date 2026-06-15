@@ -185,7 +185,11 @@ const Results = () => {
               </select>
               <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">{t('results.select')}</option>
-                {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {terms.length === 0 ? (
+                  <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
+                ) : (
+                  terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+                )}
               </select>
               <button onClick={fetchResults} disabled={!selectedTerm || loading}
                 className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium">
@@ -301,7 +305,11 @@ const Results = () => {
               </select>
               <select value={studentTermId} onChange={(e) => setStudentTermId(e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">{t('results.term')}</option>
-                {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {terms.length === 0 ? (
+                  <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
+                ) : (
+                  terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+                )}
               </select>
               <button onClick={fetchStudentResults} disabled={!studentClassId || !studentTermId || loading}
                 className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium">

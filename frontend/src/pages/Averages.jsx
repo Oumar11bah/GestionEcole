@@ -138,9 +138,11 @@ const Averages = () => {
             className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">{t('averages.allTerms')}</option>
-            {terms.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
+            {terms.length === 0 ? (
+              <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
+            ) : (
+              terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)
+            )}
           </select>
         </div>
       </div>
