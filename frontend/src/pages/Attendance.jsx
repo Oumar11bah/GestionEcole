@@ -14,7 +14,7 @@ const Attendance = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
-  const [filterStatus, setFilterStatus] = useState('Tous');
+  const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [markingMode, setMarkingMode] = useState(false);
   const [attendanceData, setAttendanceData] = useState({});
@@ -159,7 +159,7 @@ const Attendance = () => {
       selectedClass === '' ||
       (typeof r.student === 'object' && r.student?.class_assigned === parseInt(selectedClass)) ||
       (typeof r.student === 'object' && r.student?.class_assigned?.id === parseInt(selectedClass));
-    const matchStatus = filterStatus === 'Tous' || r.status === filterStatus;
+    const matchStatus = filterStatus === '' || r.status === filterStatus;
     return matchSearch && matchDate && matchClass && matchStatus;
   });
 
@@ -203,53 +203,65 @@ const Attendance = () => {
 
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('attendance.searchStudent')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={t('attendance.searchStudent')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('attendance.date')}</label>
             <input
-              type="text"
-              placeholder={t('attendance.searchStudent')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={selectedClass}
-            onChange={(e) => {
-              setSelectedClass(e.target.value);
-              if (markingMode) setMarkingMode(false);
-            }}
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">{t('attendance.allClasses')}</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
-            ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Tous">{t('attendance.allStatuses')}</option>
-            <option value="present">{t('attendance.present')}</option>
-            <option value="late">{t('attendance.late')}</option>
-            <option value="absent">{t('attendance.absent')}</option>
-            <option value="excused">{t('attendance.excused')}</option>
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('attendance.class')}</label>
+            <select
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                if (markingMode) setMarkingMode(false);
+              }}
+              className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t('results.select')}</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('attendance.status')}</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t('results.select')}</option>
+              <option value="present">{t('attendance.present')}</option>
+              <option value="late">{t('attendance.late')}</option>
+              <option value="absent">{t('attendance.absent')}</option>
+              <option value="excused">{t('attendance.excused')}</option>
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {t('attendance.recordCount', { count: filtered.length })}
           </div>
           <button
-            onClick={() => { setSearch(''); setSelectedDate(new Date().toISOString().split('T')[0]); setSelectedClass(''); setFilterStatus('Tous'); }}
+            onClick={() => { setSearch(''); setSelectedDate(new Date().toISOString().split('T')[0]); setSelectedClass(''); setFilterStatus(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium"
           >
             {t('attendance.reset')}

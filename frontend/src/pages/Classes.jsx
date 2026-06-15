@@ -17,7 +17,7 @@ const Classes = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterCycle, setFilterCycle] = useState('all');
+  const [filterCycle, setFilterCycle] = useState('');
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
 
   const showModal = (variant, title, message, onConfirm) => {
@@ -55,7 +55,7 @@ const Classes = () => {
   const filtered = classes.filter((c) => {
     const cycleName = c.cycle?.name || c.cycle_name || '';
     const matchSearch = search === '' || `${c.name} ${cycleName}`.toLowerCase().includes(search.toLowerCase());
-    const matchCycle = filterCycle === 'all' || cycleName === filterCycle;
+    const matchCycle = filterCycle === '' || cycleName === filterCycle;
     return matchSearch && matchCycle;
   });
 
@@ -81,32 +81,38 @@ const Classes = () => {
 
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={t('classes.searchPlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('classes.searchPlaceholder')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={t('classes.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
-          <select
-            value={filterCycle}
-            onChange={(e) => setFilterCycle(e.target.value)}
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">{t('classes.filterAllCycles')}</option>
-            <option value="primaire">{t('classes.filterPrimaire')}</option>
-            <option value="college">{t('classes.filterCollege')}</option>
-            <option value="lycee">{t('classes.filterLycee')}</option>
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.cycle')}</label>
+            <select
+              value={filterCycle}
+              onChange={(e) => setFilterCycle(e.target.value)}
+              className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t('results.select')}</option>
+              <option value="primaire">{t('classes.filterPrimaire')}</option>
+              <option value="college">{t('classes.filterCollege')}</option>
+              <option value="lycee">{t('classes.filterLycee')}</option>
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {t('classes.count', { count: filtered.length })}
           </div>
-          <button onClick={() => { setSearch(''); setFilterCycle('all'); }}
+          <button onClick={() => { setSearch(''); setFilterCycle(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium">
             {t('classes.reset')}
           </button>

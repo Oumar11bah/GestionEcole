@@ -20,9 +20,9 @@ const Registrations = () => {
   const [classes, setClasses] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('Tous');
-  const [filterYear, setFilterYear] = useState(() => getPreferredAcademicYear() || 'Tous');
-  const [filterClass, setFilterClass] = useState('Tous');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterYear, setFilterYear] = useState(() => getPreferredAcademicYear() || '');
+  const [filterClass, setFilterClass] = useState('');
   const [loading, setLoading] = useState(true);
   const [years, setYears] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -156,9 +156,9 @@ const Registrations = () => {
     const matchSearch = search === '' ||
       (r.student_name || '').toLowerCase().includes(term) ||
       (r.student_matricule || '').toLowerCase().includes(term);
-    const matchStatus = filterStatus === 'Tous' || r.status === filterStatus;
-    const matchYear = filterYear === 'Tous' || r.academic_year === filterYear;
-    const matchClass = filterClass === 'Tous' || r.class_name === filterClass;
+    const matchStatus = filterStatus === '' || r.status === filterStatus;
+    const matchYear = filterYear === '' || r.academic_year === filterYear;
+    const matchClass = filterClass === '' || r.class_name === filterClass;
     return matchSearch && matchStatus && matchYear && matchClass;
   }) : [];
 
@@ -369,30 +369,42 @@ const Registrations = () => {
 
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('registrations.search_placeholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('registrations.search_placeholder')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('registrations.search_placeholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
           </div>
-          <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('registrations.all_classes')}</option>
-            {(classes || []).map((c) => <option key={c.id} value={c.display_name || c.name}>{c.display_name || c.name}</option>)}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('registrations.all_statuses')}</option>
-            <option value="pending">{t('registrations.status.pending')}</option>
-            <option value="approved">{t('registrations.status.approved')}</option>
-            <option value="rejected">{t('registrations.status.rejected')}</option>
-          </select>
-          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('registrations.all_years')}</option>
-            {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('registrations.class')}</label>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {(classes || []).map((c) => <option key={c.id} value={c.display_name || c.name}>{c.display_name || c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('registrations.status')}</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              <option value="pending">{t('registrations.status.pending')}</option>
+              <option value="approved">{t('registrations.status.approved')}</option>
+              <option value="rejected">{t('registrations.status.rejected')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.academic_year')}</label>
+            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {filtered.length} {filtered.length > 1 ? t('registrations.registrations_plural') : t('registrations.registrations_singular')}
           </div>
-          <button onClick={() => { setSearch(''); setFilterStatus('Tous'); setFilterYear('Tous'); setFilterClass('Tous'); }}
+          <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterYear(getPreferredAcademicYear() || ''); setFilterClass(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium">
             {t('registrations.reset')}
           </button>

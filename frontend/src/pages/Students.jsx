@@ -16,10 +16,10 @@ const Students = () => {
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const [cycles, setCycles] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [filterCycle, setFilterCycle] = useState('Tous');
-  const [filterClass, setFilterClass] = useState('Toutes');
-  const [filterStatus, setFilterStatus] = useState('Tous');
-  const [filterYear, setFilterYear] = useState('Tous');
+  const [filterCycle, setFilterCycle] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const [years, setYears] = useState([]);
 
   useEffect(() => {
@@ -69,28 +69,28 @@ const Students = () => {
       `${s.first_name} ${s.last_name} ${s.matricule}`.toLowerCase().includes(term);
 
     const studentCycle = classCycleMap[s.class_assigned] || '';
-    const matchCycle = filterCycle === 'Tous' || studentCycle === filterCycle;
+    const matchCycle = filterCycle === '' || studentCycle === filterCycle;
 
-    const matchClass = filterClass === 'Toutes' || s.class_assigned_name === filterClass;
+    const matchClass = filterClass === '' || s.class_assigned_name === filterClass;
 
-    const matchStatus = filterStatus === 'Tous' ||
+    const matchStatus = filterStatus === '' ||
       (filterStatus === 'Actif' && s.status === 'active') ||
       (filterStatus === 'Suspendu' && s.status === 'suspended') ||
       (filterStatus === 'Radie' && s.status === 'expelled');
 
-    const matchYear = filterYear === 'Tous' || s.academic_year === filterYear;
+    const matchYear = filterYear === '' || s.academic_year === filterYear;
 
     return matchSearch && matchCycle && matchClass && matchStatus && matchYear;
   });
 
   const filteredClasses = classes.filter((c) => {
-    if (filterCycle === 'Tous') return true;
+    if (filterCycle === '') return true;
     return c.cycle?.name === filterCycle;
   });
 
   const handleCycleChange = (e) => {
     setFilterCycle(e.target.value);
-    setFilterClass('Toutes');
+    setFilterClass('');
   };
 
   const showModal = (variant, title, message, onConfirm) => {
@@ -137,12 +137,12 @@ const Students = () => {
   const handlePrintList = async () => {
     try {
       const params = {};
-      if (filterCycle !== 'Tous') params.cycle = filterCycle;
-      if (filterClass !== 'Toutes') {
+      if (filterCycle !== '') params.cycle = filterCycle;
+      if (filterClass !== '') {
         const found = classes.find((c) => c.name === filterClass);
         if (found) params.class_id = found.id;
       }
-      if (filterStatus !== 'Tous') {
+      if (filterStatus !== '') {
         const statusMap = { 'Actif': 'active', 'Suspendu': 'suspended', 'Radie': 'expelled' };
         params.status = statusMap[filterStatus];
       }
@@ -211,34 +211,49 @@ const Students = () => {
 
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('students.searchPlaceholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('students.searchPlaceholder')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('students.searchPlaceholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
           </div>
-          <select value={filterCycle} onChange={handleCycleChange} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('students.filterAllCycles')}</option>
-            {cycles.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-          </select>
-          <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Toutes">{t('students.filterAllClasses')}</option>
-            {filteredClasses.map((c) => <option key={c.id} value={c.name}>{c.display_name || c.name}</option>)}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('students.filterAllStatuses')}</option>
-            <option value="Actif">{t('students.statusActive')}</option>
-            <option value="Suspendu">{t('students.statusSuspended')}</option>
-            <option value="Radie">{t('students.statusExpelled')}</option>
-          </select>
-          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('students.filterAllYears')}</option>
-            {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.cycle')}</label>
+            <select value={filterCycle} onChange={handleCycleChange} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {cycles.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('registrations.class')}</label>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {filteredClasses.map((c) => <option key={c.id} value={c.name}>{c.display_name || c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('attendance.status')}</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              <option value="Actif">{t('students.statusActive')}</option>
+              <option value="Suspendu">{t('students.statusSuspended')}</option>
+              <option value="Radie">{t('students.statusExpelled')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.academic_year')}</label>
+            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {t('students.count', { count: filteredStudents.length })}
           </div>
-          <button onClick={() => { setSearch(''); setFilterCycle('Tous'); setFilterClass('Toutes'); setFilterStatus('Tous'); setFilterYear('Tous'); }}
+          <button onClick={() => { setSearch(''); setFilterCycle(''); setFilterClass(''); setFilterStatus(''); setFilterYear(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium">
             {t('students.reset')}
           </button>

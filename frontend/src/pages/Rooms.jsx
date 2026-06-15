@@ -14,7 +14,7 @@ const Rooms = () => {
   const [searchParams] = useSearchParams();
   const [rooms, setRooms] = useState([]);
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('Tous');
+  const [filterType, setFilterType] = useState('');
   const [showFormModal, setShowFormModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
@@ -70,7 +70,7 @@ const Rooms = () => {
 
   const filtered = rooms.filter((r) => {
     const matchSearch = search === '' || r.name.toLowerCase().includes(search.toLowerCase()) || r.code.toLowerCase().includes(search.toLowerCase());
-    const matchType = filterType === 'Tous' || r.room_type === filterType;
+    const matchType = filterType === '' || r.room_type === filterType;
     return matchSearch && matchType;
   });
 
@@ -91,20 +91,26 @@ const Rooms = () => {
 
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('rooms.search_placeholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('rooms.search_placeholder')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('rooms.search_placeholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
           </div>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <option value="Tous">{t('rooms.all_types')}</option>
-            {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('rooms.type')}</label>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">{t('results.select')}</option>
+              {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {filtered.length} {filtered.length > 1 ? t('rooms.rooms_plural') : t('rooms.rooms_singular')}
           </div>
-          <button onClick={() => { setSearch(''); setFilterType('Tous'); }}
+          <button onClick={() => { setSearch(''); setFilterType(''); }}
             className="text-xs text-blue-600 hover:text-blue-800 font-medium">
             {t('rooms.reset')}
           </button>
