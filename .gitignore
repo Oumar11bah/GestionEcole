@@ -21,10 +21,7 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 
-# Frontend source (only keep build/)
-frontend/*
-!frontend/build/
-!frontend/.gitignore
+frontend/build/
 
 # Logs
 *.log
