@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from datetime import date
 from .models import Semester
@@ -19,3 +19,15 @@ def sync_semester_to_term(sender, instance, **kwargs):
             'is_active': instance.is_active,
         }
     )
+
+
+@receiver(post_delete, sender=Semester)
+def delete_orphan_term(sender, instance, **kwargs):
+    from grades.models import Term
+
+    academic_year = str(instance.academic_year) if instance.academic_year else str(date.today().year)
+
+    Term.objects.filter(
+        name=instance.name[:20],
+        academic_year=academic_year,
+    ).delete()
