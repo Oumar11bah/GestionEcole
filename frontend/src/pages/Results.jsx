@@ -174,21 +174,21 @@ const Results = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.academic_year')}</label>
                 <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.academic_year')}</option>
+                  <option value="">{t('results.select')}</option>
                   {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.cycle')}</label>
                 <select value={selectedCycle} onChange={(e) => setSelectedCycle(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.cycle')}</option>
+                  <option value="">{t('results.select')}</option>
                   {cycles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.class')}</label>
                 <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.all_classes')}</option>
+                  <option value="">{t('results.select')}</option>
                   {filteredClasses.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
                 </select>
               </div>
@@ -306,28 +306,28 @@ const Results = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.academic_year')}</label>
                 <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.academic_year')}</option>
+                  <option value="">{t('results.select')}</option>
                   {years.map((y) => <option key={y.id} value={y.name}>{y.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.cycle')}</label>
                 <select value={selectedCycle} onChange={(e) => { setSelectedCycle(e.target.value); setStudentClassId(''); }} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.cycle')}</option>
+                  <option value="">{t('results.select')}</option>
                   {cycles.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.class')}</label>
                 <select value={studentClassId} onChange={(e) => setStudentClassId(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.class')}</option>
+                  <option value="">{t('results.select')}</option>
                   {filteredClasses.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.term')}</label>
                 <select value={studentTermId} onChange={(e) => setStudentTermId(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">{t('results.term')}</option>
+                  <option value="">{t('results.select')}</option>
                   {terms.length === 0 ? (
                     <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
                   ) : (

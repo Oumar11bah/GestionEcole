@@ -132,7 +132,7 @@ const Averages = () => {
               onChange={(e) => setSelectedClass(e.target.value)}
               className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">{t('averages.allClasses')}</option>
+              <option value="">{t('results.select')}</option>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.display_name || c.name}</option>
               ))}
@@ -145,7 +145,7 @@ const Averages = () => {
               onChange={(e) => setSelectedTerm(e.target.value)}
               className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">{t('averages.allTerms')}</option>
+              <option value="">{t('results.select')}</option>
               {terms.length === 0 ? (
                 <option value="" disabled>{t('settings.preferences.noSemesters')}</option>
               ) : (
