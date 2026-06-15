@@ -43,7 +43,7 @@ const Payments = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('Tous');
+  const [filterStatus, setFilterStatus] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterFeeType, setFilterFeeType] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('');
@@ -110,7 +110,7 @@ const Payments = () => {
     return payments.filter((p) => {
       const term = search.toLowerCase();
       const matchSearch = search === '' || `${p.student}`.toLowerCase().includes(term) || (p.student_matricule || '').toLowerCase().includes(term);
-      const matchStatus = filterStatus === 'Tous' || p.status === filterStatus;
+      const matchStatus = filterStatus === '' || p.status === filterStatus;
       const matchPeriod = filterPeriod === '' || p.month_concerned === filterPeriod;
       const matchFeeType = filterFeeType === '' || p.fee_type === filterFeeType || parseInt(filterFeeType) === (() => { const ft = feeTypes.find(f => f.name === p.fee_type); return ft ? ft.id : -1; })();
       const studentMatch = students.find((s) => s.matricule === p.student_matricule);
@@ -122,7 +122,7 @@ const Payments = () => {
   const remainingAmount = parseFloat(form.total_amount || 0) - parseFloat(form.amount_paid || 0);
 
   const resetFilters = () => {
-    setSearch(''); setFilterStatus('Tous'); setFilterClass('');
+    setSearch(''); setFilterStatus(''); setFilterClass('');
     setFilterFeeType(''); setFilterPeriod('');
   };
 
@@ -338,41 +338,56 @@ const Payments = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div className="relative md:col-span-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder={t('payments.search_student')} value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white" />
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.search_student')}</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" placeholder={t('payments.search_student')} value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white" />
+            </div>
           </div>
-          <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
-            className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
-            <option value="">{t('payments.all_classes')}</option>
-            {classes.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-            className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
-            <option value="Tous">{t('payments.all_statuses')}</option>
-            <option value="completed">{t('payments.status.completed')}</option>
-            <option value="partial">{t('payments.status.partial')}</option>
-            <option value="pending">{t('payments.status.pending')}</option>
-            <option value="failed">{t('payments.status.failed')}</option>
-            <option value="cancelled">{t('payments.status.cancelled')}</option>
-          </select>
-          <select value={filterFeeType} onChange={(e) => setFilterFeeType(e.target.value)}
-            className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
-            <option value="">{t('payments.all_fees')}</option>
-            {feeTypes.map((f) => <option key={f.id} value={f.name}>{f.name}</option>)}
-          </select>
-          <select value={filterPeriod} onChange={(e) => setFilterPeriod(e.target.value)}
-            className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
-            <option value="">{t('payments.all_periods')}</option>
-            {monthOptions.map((m) => <option key={m.key} value={m.value}>{t(`payments.month.${m.key}`)}</option>)}
-          </select>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.class')}</label>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
+              <option value="">{t('payments.select')}</option>
+              {classes.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.status_title')}</label>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
+              <option value="">{t('payments.select')}</option>
+              <option value="completed">{t('payments.status.completed')}</option>
+              <option value="partial">{t('payments.status.partial')}</option>
+              <option value="pending">{t('payments.status.pending')}</option>
+              <option value="failed">{t('payments.status.failed')}</option>
+              <option value="cancelled">{t('payments.status.cancelled')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.fee_type')}</label>
+            <select value={filterFeeType} onChange={(e) => setFilterFeeType(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
+              <option value="">{t('payments.select')}</option>
+              {feeTypes.map((f) => <option key={f.id} value={f.name}>{f.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.month')}</label>
+            <select value={filterPeriod} onChange={(e) => setFilterPeriod(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
+              <option value="">{t('payments.select')}</option>
+              {monthOptions.map((m) => <option key={m.key} value={m.value}>{t(`payments.month.${m.key}`)}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
             {filtered.length} {filtered.length > 1 ? t('payments.payments_plural') : t('payments.payments_singular')}
-            {(filterStatus !== 'Tous' || filterClass || filterFeeType || filterPeriod || search) && (
+            {(filterStatus !== '' || filterClass || filterFeeType || filterPeriod || search) && (
               <span className="ml-1 text-gray-300">({t('payments.filtered')})</span>
             )}
           </div>
@@ -405,7 +420,7 @@ const Payments = () => {
                     <div className="flex flex-col items-center space-y-2">
                       <Receipt className="w-8 h-8 text-gray-300" />
                       <p className="text-sm text-gray-400">{t('payments.no_payments')}</p>
-                      {(filterStatus !== 'Tous' || filterClass || filterFeeType || filterPeriod || search) && (
+            {(filterStatus !== '' || filterClass || filterFeeType || filterPeriod || search) && (
                         <button onClick={resetFilters} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
                           {t('payments.reset_filters')}
                         </button>
