@@ -1347,7 +1347,7 @@
   "payments.status_title": "Statut",
   "payments.total_amount": "Montant total",
   "payments.remaining": "Restant",
-  "payments.search_student": "Rechercher les paiements par élève…",
+  "payments.search_student": "Rechercher les paiements",
   "payments.search_by_name": "Rechercher par nom ou matricule…",
   "payments.filtered": "filtré",
   "payments.no_students": "Aucun élève trouvé",
