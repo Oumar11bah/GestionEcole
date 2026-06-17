@@ -8,27 +8,8 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from accounts.media_serving import serve_protected_file
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.http import HttpResponse
-import os
-
-def debug_view(request):
-    base = str(settings.BASE_DIR)
-    build_html = os.path.join(base, 'frontend', 'build', 'index.html')
-    build_dir = os.path.join(base, 'frontend', 'build')
-    exists = os.path.exists(build_html)
-    build_dir_exists = os.path.exists(build_dir)
-    build_dir_contents = os.listdir(build_dir) if build_dir_exists else []
-    lines = [
-        f"BASE_DIR: {base}",
-        f"build/index.html exists: {exists}",
-        f"build dir exists: {build_dir_exists}",
-        f"build dir contents: {build_dir_contents}",
-        f"TEMPLATE DIRS: {settings.TEMPLATES[0]['DIRS']}",
-    ]
-    return HttpResponse('\n'.join(lines), content_type='text/plain')
 
 urlpatterns = [
-    path('_debug/', debug_view),
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')),
     path('api/students/', include('students.urls')),
