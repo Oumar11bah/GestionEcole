@@ -339,6 +339,7 @@
   "login.warningMessage": "Il s'agit de votre dernière tentative de connexion. Veuillez vérifier attentivement votre nom d'utilisateur et votre mot de passe avant de continuer. En cas d'échec, votre compte sera automatiquement bloqué et vous devrez contacter l'administrateur.",
   "login.warningTitle": "⚠️ Attention !",
   "login.welcome": "Bienvenue",
+  "nav.activity": "Activités",
   "nav.attendance": "Absences",
   "nav.bulletins": "Bulletins",
   "nav.classes": "Classes",
@@ -1442,3 +1443,4 @@
   "results.decision": "Décision",
   "results.repeat": "Redoublement"
 }
+

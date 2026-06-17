@@ -28,6 +28,7 @@ import Registrations from './pages/Registrations';
 import Rooms from './pages/Rooms';
 import Results from './pages/Results';
 import Bulletins from './pages/Bulletins';
+import ActivityHistory from './pages/ActivityHistory';
 import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
@@ -78,6 +79,7 @@ const App = () => {
           <Route path="/settings" element={<PrivateRoute><Layout><Settings /></Layout></PrivateRoute>} />
           <Route path="/users" element={<PrivateRoute><Layout><UserManagement /></Layout></PrivateRoute>} />
           <Route path="/roles" element={<PrivateRoute><Layout><PermissionGuard module="users"><RoleManagement /></PermissionGuard></Layout></PrivateRoute>} />
+          <Route path="/activity" element={<PrivateRoute><Layout><ActivityHistory /></Layout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

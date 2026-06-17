@@ -8,7 +8,7 @@ import MessageModal from './MessageModal';
 import {
   LayoutDashboard, Users, Building, GraduationCap, BookOpen,
   ClipboardList, CalendarClock, CreditCard, BarChart3,
-  Settings, LogOut, Bell, Search, ChevronDown, UserPlus, DoorOpen, FileText, Menu, X, User, Shield,
+  Settings, LogOut, Bell, Search, ChevronDown, UserPlus, DoorOpen, FileText, Menu, X, User, Shield, Clock,
   Sun, Moon
 } from 'lucide-react';
 
@@ -29,6 +29,7 @@ const menuItems = [
   { icon: BarChart3, label: 'nav.results', path: '/results', module: 'results' },
   { icon: FileText, label: 'nav.bulletins', path: '/bulletins', module: 'bulletins' },
   { icon: BarChart3, label: 'nav.reports', path: '/reports', module: 'reports' },
+  { icon: Clock, label: 'nav.activity', path: '/activity', module: 'users' },
   { icon: Settings, label: 'nav.settings', path: '/settings', module: 'settings' },
   { icon: Users, label: 'nav.users', path: '/users', module: 'users' },
   { icon: Shield, label: 'nav.permissions', path: '/roles', module: 'users' },

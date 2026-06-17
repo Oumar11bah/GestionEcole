@@ -631,10 +631,14 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
-    permission_classes = [IsAuthenticated, CanViewActivity]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = ActivityLog.objects.all().select_related('user')
+        user = self.request.user
+        if user.profile.role in ['super_admin', 'admin', 'directeur']:
+            queryset = ActivityLog.objects.all().select_related('user')
+        else:
+            queryset = ActivityLog.objects.filter(user=user).select_related('user')
         action = self.request.query_params.get('action')
         module = self.request.query_params.get('module')
         user_id = self.request.query_params.get('user_id')

@@ -76,3 +76,27 @@ def log_model_delete(sender, instance, **kwargs):
         return
     repr_str = str(instance)[:100]
     log_activity(user, 'delete', sender.__name__, repr_str)
+
+
+@receiver(post_save, sender='dashboard.ActivityLog')
+def notify_admins_on_dashboard_activity(sender, instance, created, **kwargs):
+    if not created:
+        return
+    from django.contrib.auth.models import User
+    from communication.models import Notification
+    admins = User.objects.filter(
+        profile__role__in=['super_admin', 'admin'],
+        is_active=True
+    )
+    if not admins.exists():
+        return
+    notifications = []
+    action_display = dict(instance.ACTION_CHOICES).get(instance.action, instance.action)
+    for admin in admins:
+        notifications.append(Notification(
+            recipient=admin,
+            notification_type='general',
+            title=f"{action_display}: {instance.model_name}",
+            message=f"{instance.user.get_full_name() or instance.user.username} - {instance.object_repr}",
+        ))
+    Notification.objects.bulk_create(notifications)

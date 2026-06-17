@@ -339,6 +339,7 @@
   "login.warningMessage": "This is your last login attempt. Please carefully check your username and password before continuing. If it fails, your account will be automatically blocked and you will need to contact the administrator.",
   "login.warningTitle": "⚠️ Warning!",
   "login.welcome": "Welcome",
+  "nav.activity": "Activity",
   "nav.attendance": "Attendance",
   "nav.bulletins": "Report Cards",
   "nav.classes": "Classes",
