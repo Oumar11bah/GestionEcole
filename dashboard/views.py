@@ -47,8 +47,13 @@ class DashboardViewSet(viewsets.ViewSet):
                 class_assigned__cycle=cycle
             ).count()
 
+        user = request.user
+        if user.profile.role in ['super_admin', 'admin', 'directeur']:
+            recent_activities_qs = ActivityLog.objects.all()
+        else:
+            recent_activities_qs = ActivityLog.objects.filter(user=user)
         recent_activities = ActivityLogSerializer(
-            ActivityLog.objects.order_by('-timestamp')[:10], many=True
+            recent_activities_qs.order_by('-timestamp')[:10], many=True
         ).data
 
         enrollment_trend = []

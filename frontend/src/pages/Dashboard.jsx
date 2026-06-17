@@ -9,7 +9,7 @@ import { dashboardService } from '../services/api';
 const pieColors = ['#3B82F6', '#10B981', '#F59E0B'];
 
 const Dashboard = () => {
-  const { canAccess } = useAuth();
+  const { user, canAccess } = useAuth();
   const { t } = useTranslation();
   const [stats, setStats] = useState({
     total_students: 0,
@@ -92,7 +92,9 @@ const Dashboard = () => {
               <thead>
                 <tr className="text-left text-sm text-gray-500 border-b">
                   <th className="pb-3 font-medium">{t('dashboard.activity')}</th>
-                  <th className="pb-3 font-medium">{t('dashboard.user')}</th>
+                  {(user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
+                    <th className="pb-3 font-medium">{t('dashboard.user')}</th>
+                  )}
                   <th className="pb-3 font-medium">{t('dashboard.description')}</th>
                   <th className="pb-3 font-medium">{t('dashboard.date')}</th>
                 </tr>
@@ -109,7 +111,9 @@ const Dashboard = () => {
                         {act.action === 'create' ? t('dashboard.actionCreate') : act.action === 'update' ? t('dashboard.actionUpdate') : act.action === 'delete' ? t('dashboard.actionDelete') : act.action}
                       </span>
                     </td>
-                    <td className="py-3 text-gray-600">{act.user}</td>
+                    {(user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
+                      <td className="py-3 text-gray-600">{act.user}</td>
+                    )}
                     <td className="py-3 text-gray-600">{act.model_name} - {act.object_repr}</td>
                     <td className="py-3 text-gray-500">{new Date(act.timestamp).toLocaleDateString('fr-FR')}</td>
                   </tr>
