@@ -69,10 +69,10 @@ const ActivityHistory = () => {
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', {
+    return d.toLocaleString('fr-FR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
-    });
+    }).replace(', ', ' à ');
   };
 
   return (

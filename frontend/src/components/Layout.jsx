@@ -203,7 +203,7 @@ const Navbar = ({ onMenuToggle }) => {
       } catch {}
     };
     fetchNotifs();
-    const notifInterval = setInterval(fetchNotifs, 30000);
+    const notifInterval = setInterval(fetchNotifs, 10000);
     const heartInterval = setInterval(() => {
       userService.heartbeat().catch(() => {});
     }, 120000);

@@ -115,7 +115,7 @@ const Dashboard = () => {
                       <td className="py-3 text-gray-600">{act.user}</td>
                     )}
                     <td className="py-3 text-gray-600">{act.model_name} - {act.object_repr}</td>
-                    <td className="py-3 text-gray-500">{new Date(act.timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="py-3 text-gray-500">{new Date(act.timestamp).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(', ', ' à ')}</td>
                   </tr>
                 ))}
               </tbody>
