@@ -289,17 +289,9 @@ class StudentViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        
-        # Update the instance with serializer
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        
-        # Handle photo upload separately
-        if 'photo' in request.FILES:
-            instance.photo = request.FILES['photo']
-            instance.save()
-        
         return Response(self.get_serializer(instance).data)
 
     @action(detail=False, methods=['get'])

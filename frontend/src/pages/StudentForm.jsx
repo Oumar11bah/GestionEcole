@@ -194,8 +194,8 @@ const StudentForm = () => {
               <label className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 overflow-hidden transition-colors">
                 {formData.photo ? (
                   <img src={URL.createObjectURL(formData.photo)} alt={t('studentForm.photoPreviewAlt')} className="w-full h-full object-cover" />
-                ) : isEditing && formData.photo_url ? (
-                  <img src={formData.photo_url} alt={t('studentForm.photoAlt')} className="w-full h-full object-cover" />
+                ) : isEditing && photoPreview ? (
+                  <img src={photoPreview} alt={t('studentForm.photoAlt')} className="w-full h-full object-cover" />
                 ) : (
                   <Upload className="w-6 h-6 text-gray-400" />
                 )}
