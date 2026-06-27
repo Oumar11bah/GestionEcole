@@ -127,7 +127,7 @@ const ActivityHistory = () => {
   const handleBulkDelete = async () => {
     const ids = [...selected].filter(Boolean);
     if (ids.length === 0) return;
-    showModal('warning', t('activity.delete'), t('activity.confirm_delete_bulk', 'Supprimer {{count}} activité(s) ?', { count: ids.length }), async () => {
+    showModal('warning', t('activity.delete_selected', 'Supprimer ({{count}})', { count: ids.length }), t('activity.confirm_delete_bulk', 'Supprimer {{count}} activité(s) ?', { count: ids.length }), async () => {
       setDeleting(true);
       try {
         await userService.bulkDeleteActivities(ids);
