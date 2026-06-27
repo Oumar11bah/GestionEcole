@@ -76,6 +76,13 @@ def generate_password(length=12):
     return ''.join(secrets.choice(chars) for _ in range(length))
 
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
 def log_activity(user, action, module, description, request=None):
     ActivityLog.objects.create(
         user=user,
@@ -83,7 +90,7 @@ def log_activity(user, action, module, description, request=None):
         action=action,
         module=module,
         description=description,
-        ip_address=request.META.get('REMOTE_ADDR') if request else None,
+        ip_address=get_client_ip(request) if request else None,
         user_agent=request.META.get('HTTP_USER_AGENT', '') if request else '',
     )
 
@@ -111,7 +118,7 @@ def login_state(request):
     except User.DoesNotExist:
         return Response({'state': 'clean'})
 
-    ip_address = request.META.get('REMOTE_ADDR', '')
+    ip_address = get_client_ip(request)
     school_info = None
 
     if not user.is_active:
@@ -158,7 +165,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
     def post(self, request, *args, **kwargs):
         username = request.data.get('username', '')
-        ip_address = request.META.get('REMOTE_ADDR', '')
+        ip_address = get_client_ip(request)
         from school.models import SchoolInfo
 
         try:
@@ -548,7 +555,7 @@ class UserViewSet(viewsets.ModelViewSet):
             request.user.profile.last_activity = None
             request.user.profile.save(update_fields=['last_activity'])
         log_activity(request.user, 'logout', 'Authentification',
-                   f"Déconnexion depuis {request.META.get('REMOTE_ADDR', '')}", request)
+                   f"Déconnexion depuis {get_client_ip(request)}", request)
         from .notifications import notify_admins
         role_display = request.user.profile.get_role_display() if hasattr(request.user, 'profile') else ''
         notify_admins('logout',
