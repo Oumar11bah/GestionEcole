@@ -628,10 +628,18 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
 
-class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+class ActivityLogViewSet(viewsets.ModelViewSet):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if user.profile.role not in ['super_admin', 'admin', 'directeur']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent supprimer des activités")
+        instance.delete()
+        log_activity(user, 'delete', 'Activités', f"Supprimé l'activité #{instance.id}", self.request)
 
     def get_queryset(self):
         user = self.request.user
@@ -664,6 +672,15 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
         ActivityLog.objects.all().delete()
         log_activity(request.user, 'delete', 'Activités', "A vidé tous les journaux d'activité", request)
         return Response({'status': 'Journaux supprimés avec succès'})
+
+    @action(detail=False, methods=['post'])
+    def bulk_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids:
+            return Response({'error': 'Aucun ID fourni'}, status=status.HTTP_400_BAD_REQUEST)
+        count = ActivityLog.objects.filter(id__in=ids).delete()[0]
+        log_activity(request.user, 'delete', 'Activités', f"Supprimé {count} activité(s) en masse", request)
+        return Response({'status': f'{count} activité(s) supprimée(s)'})
 
     @action(detail=False, methods=['get'])
     def modules(self, request):

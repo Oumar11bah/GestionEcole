@@ -4,7 +4,7 @@ import { userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   ChevronLeft, ChevronRight, Search, RotateCcw, Clock, User,
-  Filter,
+  Filter, Trash2,
 } from 'lucide-react';
 
 const actionColors = {
@@ -30,13 +30,15 @@ const actionIcons = {
 const ActivityHistory = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const isAdmin = ['super_admin', 'admin'].includes(user?.profile?.role);
+  const isAdmin = ['super_admin', 'admin', 'directeur'].includes(user?.profile?.role);
 
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [selected, setSelected] = useState(new Set());
   const perPage = 50;
 
   const fetchActivities = useCallback(async () => {
@@ -75,6 +77,54 @@ const ActivityHistory = () => {
     }).replace(', ', ' à ');
   };
 
+  const allSelected = activities.length > 0 && activities.every(a => selected.has(a.id));
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(activities.map(a => a.id).filter(Boolean)));
+    }
+  };
+
+  const handleDeleteOne = async (id) => {
+    if (!window.confirm(t('activity.confirm_delete_one', 'Supprimer cette activité ?'))) return;
+    setDeleting(true);
+    try {
+      await userService.deleteActivity(id);
+      setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
+      await fetchActivities();
+    } catch (err) {
+      console.error('Failed to delete activity:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selected].filter(Boolean);
+    if (ids.length === 0) return;
+    if (!window.confirm(t('activity.confirm_delete_bulk', 'Supprimer {count} activité(s) ?', { count: ids.length }))) return;
+    setDeleting(true);
+    try {
+      await userService.bulkDeleteActivities(ids);
+      setSelected(new Set());
+      await fetchActivities();
+    } catch (err) {
+      console.error('Failed to bulk delete:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -93,17 +143,27 @@ const ActivityHistory = () => {
             type="text"
             placeholder={t('activity.search_placeholder', 'Rechercher par module ou action...')}
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); setSelected(new Set()); }}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <button
-          onClick={() => { setSearch(''); setPage(1); }}
+          onClick={() => { setSearch(''); setPage(1); setSelected(new Set()); }}
           className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
           {t('activity.reset', 'Réinitialiser')}
         </button>
+        {selected.size > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            disabled={deleting}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            {t('activity.delete_selected', 'Supprimer ({count})', { count: selected.size })}
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -120,6 +180,14 @@ const ActivityHistory = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                  <th className="w-10 px-2 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 dark:border-gray-600"
+                    />
+                  </th>
                   <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300">
                     {t('activity.date', 'Date')}
                   </th>
@@ -143,11 +211,22 @@ const ActivityHistory = () => {
                   <th className="text-left px-4 py-3 text-sm font-semibold text-gray-600 dark:text-gray-300">
                     {t('activity.description', 'Description')}
                   </th>
+                  {isAdmin && (
+                    <th className="w-14 px-2 py-3" />
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {activities.map((act, idx) => (
-                  <tr key={act.id || idx} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <tr key={act.id || idx} className={`border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${selected.has(act.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                    <td className="px-2 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(act.id)}
+                        onChange={() => toggleSelect(act.id)}
+                        className="rounded border-gray-300 dark:border-gray-600"
+                      />
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {formatDate(act.timestamp)}
                     </td>
@@ -167,6 +246,18 @@ const ActivityHistory = () => {
                     <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
                       {act.description}
                     </td>
+                    {isAdmin && (
+                      <td className="px-2 py-3">
+                        <button
+                          onClick={() => handleDeleteOne(act.id)}
+                          disabled={deleting}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-40"
+                          title={t('activity.delete', 'Supprimer')}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
