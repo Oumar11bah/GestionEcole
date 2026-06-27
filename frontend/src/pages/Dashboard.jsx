@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { dashboardService, userService } from '../services/api';
 import { Trash2 } from 'lucide-react';
 import MessageModal from '../components/MessageModal';
+import toast from '../utils/toast';
 
 const pieColors = ['#3B82F6', '#10B981', '#F59E0B'];
 
@@ -36,12 +37,14 @@ const Dashboard = () => {
   const closeModal = () => setModal({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
 
   const handleClearActivities = () => {
-    showModal('warning', t('activity.delete'), t('dashboard.confirmClearActivities', 'Vider toutes les activités ?'), async () => {
+    showModal('warning', t('activity.delete', 'Supprimer'), t('dashboard.confirmClearActivities', 'Vider toutes les activités enregistrées ?'), async () => {
       try {
         await userService.clearActivities();
         closeModal();
         fetchStats();
-      } catch { /* ignore */ }
+      } catch (err) {
+        toast.error(err.response?.data?.detail || 'Erreur lors du vidage');
+      }
     });
   };
 
