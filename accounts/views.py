@@ -678,10 +678,13 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
                 pass
         return queryset[:200]
 
-    @action(detail=False, methods=['delete'])
+    @action(detail=False, methods=['delete', 'post'])
     def clear_all(self, request):
+        user = request.user
+        if user.profile.role not in ['super_admin', 'admin', 'directeur']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent vider les journaux")
         ActivityLog.objects.all().delete()
-        log_activity(request.user, 'delete', 'Activités', "A vidé tous les journaux d'activité", request)
         return Response({'status': 'Journaux supprimés avec succès'})
 
     @action(detail=False, methods=['post'])

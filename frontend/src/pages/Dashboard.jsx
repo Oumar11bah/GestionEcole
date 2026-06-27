@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { Users, GraduationCap, TrendingUp, Award } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { dashboardService } from '../services/api';
+import { dashboardService, userService } from '../services/api';
+import { Trash2 } from 'lucide-react';
+import MessageModal from '../components/MessageModal';
 
 const pieColors = ['#3B82F6', '#10B981', '#F59E0B'];
 
@@ -29,6 +31,19 @@ const Dashboard = () => {
     recent_activities: [],
   });
   const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
+  const showModal = (variant, title, message, onConfirm) => setModal({ open: true, variant, title, message, onConfirm, confirmLabel: title });
+  const closeModal = () => setModal({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
+
+  const handleClearActivities = () => {
+    showModal('warning', t('activity.delete'), t('dashboard.confirmClearActivities', 'Vider toutes les activités ?'), async () => {
+      try {
+        await userService.clearActivities();
+        closeModal();
+        fetchStats();
+      } catch { /* ignore */ }
+    });
+  };
 
   const fetchStats = useCallback(() => {
     dashboardService.getStats()
@@ -105,7 +120,12 @@ const Dashboard = () => {
 
       {stats.recent_activities.length > 0 ? (
         <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard.recentActivities')}</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">{t('dashboard.recentActivities')}</h3>
+            <button onClick={handleClearActivities} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title={t('dashboard.clearActivities', 'Vider')}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -146,6 +166,7 @@ const Dashboard = () => {
           <p className="text-gray-500">{t('dashboard.noActivity')}</p>
         </div>
       )}
+      <MessageModal open={modal.open} onClose={closeModal} title={modal.title} message={modal.message} variant={modal.variant} confirmLabel={modal.confirmLabel} onConfirm={modal.onConfirm} />
     </div>
   );
 };
