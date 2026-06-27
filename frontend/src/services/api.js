@@ -202,6 +202,9 @@ export const paymentService = {
   update: (id, data) => api.patch(`/payments/payments/${id}/`, data),
   delete: (id) => api.delete(`/payments/payments/${id}/`),
   getAllFeeTypes: (params) => api.get('/payments/fee-types/', { params }),
+  createFeeType: (data) => api.post('/payments/fee-types/', data),
+  updateFeeType: (id, data) => api.patch(`/payments/fee-types/${id}/`, data),
+  deleteFeeType: (id) => api.delete(`/payments/fee-types/${id}/`),
   initiateMobilePayment: (data) => api.post('/mobile/providers/initiate_payment/', data),
 };
 
