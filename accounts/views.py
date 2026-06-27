@@ -565,12 +565,17 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def roles(self, request):
+        assigned_roles = set()
+        for role_key, _ in UserProfile.ROLE_CHOICES:
+            if UserProfile.objects.filter(role=role_key).exists():
+                assigned_roles.add(role_key)
         roles_data = []
         for role_key, role_label in UserProfile.ROLE_CHOICES:
-            roles_data.append({
-                'role': role_key,
-                'label': role_label,
-            })
+            if role_key in assigned_roles:
+                roles_data.append({
+                    'role': role_key,
+                    'label': role_label,
+                })
         serializer = RoleSerializer(data=roles_data, many=True)
         serializer.is_valid()
         return Response(serializer.data)

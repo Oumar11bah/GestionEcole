@@ -690,6 +690,13 @@ const AlertsTab = ({ communicationService: cs }) => {
   const { t } = useTranslation();
   const [sending, setSending] = useState(false);
   const [alertModal, setAlertModal] = useState({ open: false, variant: 'info', title: '', message: '' });
+  const [roles, setRoles] = useState([]);
+
+  useEffect(() => {
+    import('../services/api').then(({ userService }) => {
+      userService.getRoles().then((r) => setRoles(r.data)).catch(() => {});
+    });
+  }, []);
 
   const [form, setForm] = useState({
     title: '',
@@ -732,12 +739,9 @@ const AlertsTab = ({ communicationService: cs }) => {
             <select value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })}
               className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="all">{t('settings.alertsTab.allUsers')}</option>
-              <option value="admin">{t('settings.alertsTab.admins')}</option>
-              <option value="comptable">{t('settings.alertsTab.accountants')}</option>
-              <option value="directeur">{t('settings.alertsTab.directors')}</option>
-              <option value="enseignant">{t('settings.alertsTab.teachers')}</option>
-              <option value="surveillant">{t('settings.alertsTab.supervisors')}</option>
-              <option value="secretaire">{t('settings.alertsTab.secretaries')}</option>
+              {roles.map((r) => (
+                <option key={r.role} value={r.role}>{r.label}</option>
+              ))}
             </select>
           </div>
         </div>
