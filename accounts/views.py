@@ -80,6 +80,9 @@ def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
     if x_forwarded_for:
         return x_forwarded_for.split(',')[0].strip()
+    x_real_ip = request.META.get('HTTP_X_REAL_IP', '')
+    if x_real_ip:
+        return x_real_ip.strip()
     return request.META.get('REMOTE_ADDR', '')
 
 
@@ -227,8 +230,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 successful=True
             )
             if user:
+                ua = request.META.get('HTTP_USER_AGENT', '')
+                if 'Mobile' in ua:
+                    device = 'Mobile'
+                elif 'Tablet' in ua or 'iPad' in ua:
+                    device = 'Tablette'
+                else:
+                    device = 'Ordinateur'
                 log_activity(user, 'login', 'Authentification',
-                           f"Connexion réussie depuis {ip_address}", request)
+                           f"Connexion réussie ({device})", request)
                 from .notifications import notify_admins
                 role_display = user.profile.get_role_display() if hasattr(user, 'profile') else ''
                 notify_admins('login',
