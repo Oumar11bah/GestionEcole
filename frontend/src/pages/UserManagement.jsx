@@ -239,6 +239,8 @@ const UserManagement = () => {
     return (u.username?.charAt(0) || '?').toUpperCase();
   };
 
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-600 px-6 py-5">
@@ -331,9 +333,7 @@ const UserManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan="9" className="px-6 py-12 text-center text-gray-500">{t('users.loading')}</td></tr>
-              ) : filteredUsers.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <tr><td colSpan="9" className="px-6 py-12 text-center text-gray-500">{t('users.noUsers')}</td></tr>
               ) : filteredUsers.map((u) => (
                 <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">

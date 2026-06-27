@@ -13,6 +13,7 @@ const statusColors = { available: 'bg-green-100 text-green-700', occupied: 'bg-r
 const Rooms = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -35,9 +36,12 @@ const Rooms = () => {
 
   const fetchRooms = async () => {
     try {
+      setLoading(true);
       const res = await roomService.getAll();
       setRooms(res.data.results || res.data);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); } finally {
+      setLoading(false);
+    }
   };
 
   const openEdit = (room) => {
@@ -74,6 +78,8 @@ const Rooms = () => {
     const matchType = filterType === '' || r.room_type === filterType;
     return matchSearch && matchType;
   });
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>;
 
   return (
     <div>

@@ -141,6 +141,14 @@ const ActivityHistory = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 lg:p-6 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -182,11 +190,7 @@ const ActivityHistory = () => {
         )}
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          {t('common.loading', 'Chargement...')}
-        </div>
-      ) : activities.length === 0 ? (
+      {activities.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           {t('activity.no_activity', 'Aucune activité trouvée.')}
         </div>

@@ -74,7 +74,13 @@ const StudentProfile = () => {
     fetchTabData();
   }, [activeTab, id]);
 
-  if (loading) return <div className="flex items-center justify-center h-64">{t('studentProfile.loading')}</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
   if (!student) return <div className="text-center py-12 text-gray-500">{t('studentProfile.notFound')}</div>;
 
   const tabs = [
@@ -239,7 +245,7 @@ const StudentProfile = () => {
           )}
 
           {activeTab === 'notes' && (
-            tabLoading ? <div className="py-8 text-center text-gray-500">{t('studentProfile.loading')}</div> :
+            tabLoading ? <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div> :
             grades.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <GraduationCap className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -365,7 +371,7 @@ const StudentProfile = () => {
           )}
 
           {activeTab === 'absences' && (
-            tabLoading ? <div className="py-8 text-center text-gray-500">{t('studentProfile.loading')}</div> :
+            tabLoading ? <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div> :
             absences.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -398,7 +404,7 @@ const StudentProfile = () => {
           )}
 
           {activeTab === 'payments' && (
-            tabLoading ? <div className="py-8 text-center text-gray-500">{t('studentProfile.loading')}</div> :
+            tabLoading ? <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div> :
             payments.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />

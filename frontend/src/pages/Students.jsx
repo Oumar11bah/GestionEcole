@@ -175,7 +175,13 @@ const Students = () => {
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${map[status] || 'bg-gray-100 text-gray-700'}`}>{labels[status] || status}</span>;
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64">{t('students.loading')}</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <>
