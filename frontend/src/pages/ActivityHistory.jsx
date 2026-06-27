@@ -27,6 +27,16 @@ const actionIcons = {
   export: '📤',
 };
 
+const actionLabels = {
+  create: 'Création',
+  update: 'Modification',
+  delete: 'Suppression',
+  login: 'Connexion',
+  logout: 'Déconnexion',
+  view: 'Consultation',
+  export: 'Export',
+};
+
 const ActivityHistory = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -237,7 +247,7 @@ const ActivityHistory = () => {
                     )}
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${actionColors[act.action] || 'bg-gray-100 text-gray-800'}`}>
-                        {actionIcons[act.action] || '•'} {act.action}
+                        {actionIcons[act.action] || '•'} {actionLabels[act.action] || act.action}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
