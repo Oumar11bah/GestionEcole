@@ -379,7 +379,7 @@ const Navbar = ({ onMenuToggle }) => {
                   <div className="px-4 py-8 text-center text-gray-500 text-sm">Aucune notification</div>
                 ) : (
                   notifList.map((n) => (
-                    <div key={n.id} className={`relative px-4 py-3 border-b hover:bg-gray-50 cursor-pointer group ${!n.is_read ? 'bg-blue-50/50' : ''}`}
+                    <div key={n.id} className={`relative px-4 py-3 border-b hover:bg-gray-50 cursor-pointer group ${!n.is_read ? 'bg-blue-100 border-l-4 border-l-blue-500' : 'border-l-4 border-l-transparent'}`}
                       onClick={() => { setShowNotifs(false); setSelectedNotif(n); }}>
                       <div className="flex items-start space-x-2">
                         <span className="text-base">{notifTypeIcon(n.notification_type)}</span>

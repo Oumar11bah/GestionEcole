@@ -685,6 +685,8 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les administrateurs peuvent vider les journaux")
         ActivityLog.objects.all().delete()
+        from dashboard.models import ActivityLog as DashboardActivityLog
+        DashboardActivityLog.objects.all().delete()
         return Response({'status': 'Journaux supprimés avec succès'})
 
     @action(detail=False, methods=['post'])
