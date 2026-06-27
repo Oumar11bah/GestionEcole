@@ -1019,6 +1019,7 @@
   "subjectForm.name": "Subject name *",
   "subjectForm.primaire": "Primary",
   "subjectForm.selectCycle": "Please select at least one cycle",
+  "subjectForm.loadError": "Error loading cycles",
   "subjects.actions": "Actions",
   "subjects.add": "Add a subject",
   "subjects.code": "Code",

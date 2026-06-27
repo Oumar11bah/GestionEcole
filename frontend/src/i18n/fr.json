@@ -1019,6 +1019,7 @@
   "subjectForm.name": "Nom de la matiere *",
   "subjectForm.primaire": "Primaire",
   "subjectForm.selectCycle": "Veuillez selectionner au moins un cycle",
+  "subjectForm.loadError": "Erreur lors du chargement des cycles",
   "subjects.actions": "Actions",
   "subjects.add": "Ajouter une matière",
   "subjects.code": "Code",

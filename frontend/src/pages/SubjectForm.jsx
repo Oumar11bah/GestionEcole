@@ -33,7 +33,7 @@ const SubjectForm = () => {
   useEffect(() => {
     cycleService.getAll()
       .then((r) => setCycles(r.data.results || r.data))
-      .catch(console.error);
+      .catch(() => showModal('error', t('common.error'), t('subjectForm.loadError')));
 
     if (isEditing) {
       subjectService.getById(id)
@@ -147,23 +147,27 @@ const SubjectForm = () => {
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">{t('subjectForm.cycles')}</label>
-          <div className="flex space-x-4">
-            {cycles.map((cycle) => (
-              <label key={cycle.id} className={`flex items-center space-x-2 border rounded-lg px-4 py-2 cursor-pointer transition-colors ${
-                formData.cycle.includes(cycle.id) ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={formData.cycle.includes(cycle.id)}
-                  onChange={() => handleCycleToggle(cycle.id)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm">
-                  {cycle.name === 'primaire' ? t('subjectForm.primaire') : cycle.name === 'college' ? t('subjectForm.college') : t('subjectForm.lycee')}
-                </span>
-              </label>
-            ))}
-          </div>
+          {cycles.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">{t('subjectDetail.noCycles')}</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {cycles.map((cycle) => (
+                <label key={cycle.id} className={`flex items-center space-x-2 border rounded-lg px-4 py-2 cursor-pointer transition-colors ${
+                  formData.cycle.includes(cycle.id) ? 'bg-blue-50 border-blue-300' : 'hover:bg-gray-50'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={formData.cycle.includes(cycle.id)}
+                    onChange={() => handleCycleToggle(cycle.id)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm">
+                    {cycle.name === 'primaire' ? t('subjectForm.primaire') : cycle.name === 'college' ? t('subjectForm.college') : t('subjectForm.lycee')}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mb-6">
