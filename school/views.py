@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny, SAFE_METHODS
 from .models import AcademicYear, SchoolInfo, Semester
 from .serializers import AcademicYearSerializer, SchoolInfoSerializer, SemesterSerializer
 from accounts.permissions import CanManageSchool
@@ -40,6 +40,11 @@ class AcademicYearViewSet(viewsets.ModelViewSet):
 class SchoolInfoViewSet(viewsets.ModelViewSet):
     queryset = SchoolInfo.objects.all()
     serializer_class = SchoolInfoSerializer
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [AllowAny()]
+        return [IsAuthenticated(), CanManageSchool()]
 
     def list(self, request, *args, **kwargs):
         instance = SchoolInfo.objects.first()

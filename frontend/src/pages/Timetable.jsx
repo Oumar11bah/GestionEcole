@@ -333,7 +333,7 @@ const Timetable = () => {
 </style></head><body>
 <div class="header">
   <div class="header-left">
-    ${scol.logo ? '<img src="' + scol.logo + '" style="height:44px" />' : ''}
+    ${scol.logo_url ? '<img src="' + scol.logo_url + '" style="height:44px" />' : ''}
     <div><h1>${scol.name || t('timetable.establishment')}</h1><p>${scol.acronym || ''}${scol.city ? ' · ' + scol.city : ''}</p></div>
   </div>
   <div class="header-center"><h2>${t('timetable.timetable_title')}</h2><div class="sub">${clsName}${clsName && year ? ' · ' : ''}${year}</div></div>
@@ -479,8 +479,8 @@ const Timetable = () => {
       <div className="bg-white rounded-lg border border-gray-200 mb-5 overflow-hidden">
         <div className="px-5 py-4 flex items-center justify-between border-b-4 border-emerald-600">
           <div className="flex items-center space-x-3">
-            {scol.logo ? (
-              <img src={scol.logo} alt="" className="h-10 w-10 rounded object-cover border border-gray-200" />
+            {scol.logo_url ? (
+              <img src={scol.logo_url} alt="" className="h-10 w-10 rounded object-cover border border-gray-200" />
             ) : (
               <div className="h-10 w-10 rounded bg-emerald-100 flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-emerald-600" />
