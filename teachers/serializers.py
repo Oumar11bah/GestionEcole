@@ -30,7 +30,7 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'matricule', 'first_name', 'last_name', 'full_name', 'gender', 'date_of_birth',
                   'phone_number', 'email', 'address', 'photo',
                   'specialty', 'diploma', 'years_of_experience', 'hire_date', 'contract_type',
-                  'is_active',
+                  'salary', 'is_active',
                   'teacher_subjects', 'salary_history',
                   'created_at', 'updated_at']
 
