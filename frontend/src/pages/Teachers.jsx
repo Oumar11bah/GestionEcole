@@ -94,31 +94,31 @@ const Teachers = () => {
             {filtered.length === 0 ? (
               <tr><td colSpan="7" className="px-6 py-8 text-center text-gray-500">{t('teachers.notFound')}</td></tr>
             ) : (
-              filtered.map((t) => (
-                <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50">
+              filtered.map((teacher) => (
+                <tr key={teacher.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    {t.photo ? (
-                      <img src={t.photo.startsWith('http') ? t.photo : `${PHOTO_BASE}${t.photo}`} alt={t.first_name} className="w-10 h-10 rounded-full object-cover" />
+                    {teacher.photo ? (
+                      <img src={teacher.photo.startsWith('http') ? teacher.photo : `${PHOTO_BASE}${teacher.photo}`} alt={teacher.first_name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold">
-                        {t.first_name?.charAt(0)}{t.last_name?.charAt(0)}
+                        {teacher.first_name?.charAt(0)}{teacher.last_name?.charAt(0)}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{t.matricule}</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">{t.first_name} {t.last_name}</td>
-                  <td className="px-6 py-4 text-gray-600">{t.phone_number}</td>
-                  <td className="px-6 py-4 text-gray-600">{t.email || '—'}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{teacher.matricule}</td>
+                  <td className="px-6 py-4 font-medium text-gray-900">{teacher.first_name} {teacher.last_name}</td>
+                  <td className="px-6 py-4 text-gray-600">{teacher.phone_number}</td>
+                  <td className="px-6 py-4 text-gray-600">{teacher.email || '—'}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {t.is_active ? t('teachers.active') : t('teachers.inactive')}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${teacher.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {teacher.is_active ? t('teachers.active') : t('teachers.inactive')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-2">
-                      <Link to={`/teachers/${t.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Eye className="w-4 h-4" /></Link>
-                      <Link to={`/teachers/${t.id}/edit`} className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg"><Pencil className="w-4 h-4" /></Link>
-                      <button onClick={() => handleDelete(t.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      <Link to={`/teachers/${teacher.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Eye className="w-4 h-4" /></Link>
+                      <Link to={`/teachers/${teacher.id}/edit`} className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg"><Pencil className="w-4 h-4" /></Link>
+                      <button onClick={() => handleDelete(teacher.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
