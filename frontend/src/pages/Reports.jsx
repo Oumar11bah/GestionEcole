@@ -244,7 +244,7 @@ const Reports = () => {
         columnStyles: {
           0: { cellWidth: 25 },
           1: { cellWidth: 55 },
-          2: { cellWidth: 15 },
+          2: { cellWidth: 22 },
           3: { cellWidth: 35 },
           4: { cellWidth: 25 },
         },

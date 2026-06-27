@@ -424,6 +424,8 @@
   "reports.activityHistory": "Activity History",
   "reports.allClasses": "All classes",
   "reports.amount": "Amount",
+  "reports.active": "Active",
+  "reports.inactive": "Inactive",
   "reports.at": "at",
   "reports.attendanceDetails": "Absence details",
   "reports.attendanceRate": "Attendance rate",
