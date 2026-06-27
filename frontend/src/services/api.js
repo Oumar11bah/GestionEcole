@@ -79,6 +79,8 @@ api.interceptors.response.use(
         } finally {
           isRefreshing = false;
         }
+      } else {
+        isRefreshing = false;
       }
     }
 
