@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, CheckCircle, Clock, XCircle, Eye, Pencil, Trash2, X, Save, DollarSign, CreditCard, Users, Receipt, Printer, AlertCircle, RefreshCw } from 'lucide-react';
 import { paymentService, studentService, classService } from '../services/api';
 import MessageModal from '../components/MessageModal';
+import Label from '../components/Label';
 import { getPreferredAcademicYear, getDefaultAcademicYear } from '../utils/preferences';
 
 const statusConfig = {
@@ -408,7 +409,7 @@ const Payments = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.search_student')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('payments.search_student')}</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input type="text" placeholder={t('payments.search_student')} value={search}
@@ -417,7 +418,7 @@ const Payments = () => {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.class')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('payments.class')}</Label>
             <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
               <option value="">{t('payments.select')}</option>
@@ -425,7 +426,7 @@ const Payments = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.status_title')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('payments.status_title')}</Label>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
               <option value="">{t('payments.select')}</option>
@@ -437,7 +438,7 @@ const Payments = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.fee_type')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('payments.fee_type')}</Label>
             <select value={filterFeeType} onChange={(e) => setFilterFeeType(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
               <option value="">{t('payments.select')}</option>
@@ -445,7 +446,7 @@ const Payments = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('payments.month')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('payments.month')}</Label>
             <select value={filterPeriod} onChange={(e) => setFilterPeriod(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50 hover:bg-white transition-all">
               <option value="">{t('payments.select')}</option>
@@ -675,7 +676,7 @@ const Payments = () => {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.fee_type')} *</label>
+                    <Label required>{t('payments.fee_type')}</Label>
                     <select value={form.fee_type_id} onChange={(e) => handleFeeTypeSelect(parseInt(e.target.value))}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required>
                       <option value="">{t('payments.select')}</option>
@@ -683,7 +684,7 @@ const Payments = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.month_concerned')}</label>
+                    <Label>{t('payments.month_concerned')}</Label>
                     <select value={form.month_concerned} onChange={(e) => setForm({ ...form, month_concerned: e.target.value })}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white">
                       <option value="">{t('payments.select')}</option>
@@ -693,19 +694,19 @@ const Payments = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.total_amount')} *</label>
+                    <Label required>{t('payments.total_amount')}</Label>
                     <input type="number" step="0.01" min="0" value={form.total_amount}
                       onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.paid_amount')} *</label>
+                    <Label required>{t('payments.paid_amount')}</Label>
                     <input type="number" step="0.01" min="0" max={form.total_amount} value={form.amount_paid}
                       onChange={(e) => setForm({ ...form, amount_paid: e.target.value })}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.remaining')}</label>
+                    <Label>{t('payments.remaining')}</Label>
                     <div className={`w-full border rounded-lg px-4 py-2.5 text-sm font-bold ${remainingAmount > 0 ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-600 bg-green-50 border-green-200'}`}>
                       {remainingAmount.toLocaleString()} GNF
                     </div>
@@ -715,7 +716,7 @@ const Payments = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.payment_method')}</label>
+                  <Label>{t('payments.payment_method')}</Label>
                   <select value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                     <option value="cash">{t('payments.method.cash')}</option>
@@ -726,7 +727,7 @@ const Payments = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.payment_date')}</label>
+                  <Label required>{t('payments.payment_date')}</Label>
                   <input type="date" value={form.payment_date}
                     onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white" required />
@@ -735,20 +736,20 @@ const Payments = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.academic_year')}</label>
+                  <Label>{t('payments.academic_year')}</Label>
                   <input type="text" value={form.academic_year}
                     onChange={(e) => setForm({ ...form, academic_year: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.reference')}</label>
+                  <Label>{t('payments.reference')}</Label>
                   <input type="text" value={form.reference}
                     onChange={(e) => setForm({ ...form, reference: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
                     placeholder={t('payments.transaction_no')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.status_title')}</label>
+                  <Label>{t('payments.status_title')}</Label>
                   <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
                     <option value="pending">{t('payments.status.pending')}</option>
@@ -759,7 +760,7 @@ const Payments = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.notes')}</label>
+                <Label>{t('payments.notes')}</Label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
                   rows={2} placeholder={t('payments.notes_placeholder')} />
@@ -797,20 +798,20 @@ const Payments = () => {
 
             <form onSubmit={handleSaveFeeType} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.fee_type_name')} *</label>
+                <Label required>{t('payments.fee_type_name')}</Label>
                 <input type="text" value={feeTypeForm.name}
                   onChange={(e) => setFeeTypeForm({ ...feeTypeForm, name: e.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.fee_type_amount')} *</label>
+                  <Label required>{t('payments.fee_type_amount')}</Label>
                   <input type="number" step="0.01" min="0" value={feeTypeForm.amount}
                     onChange={(e) => setFeeTypeForm({ ...feeTypeForm, amount: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.fee_type_cycle')}</label>
+                  <Label>{t('payments.fee_type_cycle')}</Label>
                   <select value={feeTypeForm.cycle} onChange={(e) => setFeeTypeForm({ ...feeTypeForm, cycle: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white">
                     <option value="all">{t('payments.fee_type_cycle_all')}</option>
@@ -821,7 +822,7 @@ const Payments = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('payments.fee_type_description')}</label>
+                <Label>{t('payments.fee_type_description')}</Label>
                 <textarea value={feeTypeForm.description}
                   onChange={(e) => setFeeTypeForm({ ...feeTypeForm, description: e.target.value })}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white"

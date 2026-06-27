@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { classService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import { getDefaultAcademicYear, fetchAcademicYears } from '../utils/preferences';
+import Label from './Label';
 
 const ClassForm = () => {
   const { id } = useParams();
@@ -109,7 +110,7 @@ const ClassForm = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nom de la classe</label>
+                <Label required>Nom de la classe</Label>
                 <input
                   type="text"
                   name="name"
@@ -121,7 +122,7 @@ const ClassForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Cycle</label>
+                <Label required>Cycle</Label>
                 <select
                   name="cycle_id"
                   value={formData.cycle_id}
@@ -137,7 +138,7 @@ const ClassForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Année académique</label>
+                <Label required>Année académique</Label>
                 <select
                   name="academic_year"
                   value={formData.academic_year}

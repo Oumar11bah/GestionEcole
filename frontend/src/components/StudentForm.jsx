@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { studentService } from '../services/api';
 import MessageModal from '../components/MessageModal';
+import Label from './Label';
 
 const StudentForm = () => {
   const { id } = useParams();
@@ -111,7 +112,7 @@ const StudentForm = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Matricule</label>
+                <Label>Matricule</Label>
                 <input
                   type="text"
                   name="matricule"
@@ -122,7 +123,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nom</label>
+                <Label required>Nom</Label>
                 <input
                   type="text"
                   name="last_name"
@@ -134,7 +135,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Prénom</label>
+                <Label required>Prénom</Label>
                 <input
                   type="text"
                   name="first_name"
@@ -146,7 +147,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Genre</label>
+                <Label>Genre</Label>
                 <select
                   name="gender"
                   value={formData.gender}
@@ -159,7 +160,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date de naissance</label>
+                <Label required>Date de naissance</Label>
                 <input
                   type="date"
                   name="date_of_birth"
@@ -171,7 +172,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Classe</label>
+                <Label required>Classe</Label>
                 <select
                   name="class_assigned_id"
                   value={formData.class_assigned_id}
@@ -187,7 +188,7 @@ const StudentForm = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Téléphone</label>
+                <Label>Téléphone</Label>
                 <input
                   type="tel"
                   name="phone_number"

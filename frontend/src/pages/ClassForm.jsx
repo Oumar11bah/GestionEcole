@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { X } from 'lucide-react';
+import Label from '../components/Label';
 import { classService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import { getDefaultAcademicYear, fetchAcademicYears } from '../utils/preferences';
@@ -132,7 +133,7 @@ const ClassForm = () => {
       <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-6">
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t('classForm.nameLabel')}</label>
+          <Label required>{t('classForm.nameLabel')}</Label>
           <select
             value={formData.name}
             onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -148,7 +149,7 @@ const ClassForm = () => {
 
         <div className={`gap-6 mb-6 ${showSeries ? 'grid grid-cols-3' : 'grid grid-cols-2'}`}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('classForm.cycleLabel')}</label>
+            <Label>{t('classForm.cycleLabel')}</Label>
             <select
               value={formData.cycle_name}
               onChange={(e) => handleCycleChange(e.target.value)}
@@ -162,7 +163,7 @@ const ClassForm = () => {
 
           {showSeries && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('classForm.seriesLabel')}</label>
+              <Label>{t('classForm.seriesLabel')}</Label>
               <select
                 value={formData.specialty}
                 onChange={(e) => setFormData({...formData, specialty: e.target.value})}
@@ -177,7 +178,7 @@ const ClassForm = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('classForm.academicYearLabel')}</label>
+            <Label required>{t('classForm.academicYearLabel')}</Label>
             <select
               required
               value={formData.academic_year}

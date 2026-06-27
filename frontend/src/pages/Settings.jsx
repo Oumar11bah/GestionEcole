@@ -8,6 +8,7 @@ import { authService, schoolService, userService, communicationService, academic
 import { applyThemeColors } from '../utils/theme';
 import { getDefaultAcademicYear, fetchAcademicYears as fetchSharedAcademicYears } from '../utils/preferences';
 import MessageModal from '../components/MessageModal';
+import Label from '../components/Label';
 
 const Settings = () => {
   const { t } = useTranslation();
@@ -305,7 +306,7 @@ const Settings = () => {
             <form onSubmit={handlePasswordSave} className="max-w-2xl space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.password.title')}</h3>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.password.current')}</label>
+                <Label required>{t('settings.password.current')}</Label>
                 <div className="relative">
                   <input
                     type={showPw.current ? 'text' : 'password'}
@@ -320,7 +321,7 @@ const Settings = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.password.new')}</label>
+                <Label required>{t('settings.password.new')}</Label>
                 <div className="relative">
                   <input
                     type={showPw.new ? 'text' : 'password'}
@@ -336,7 +337,7 @@ const Settings = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.password.confirm')}</label>
+                <Label required>{t('settings.password.confirm')}</Label>
                 <div className="relative">
                   <input
                     type={showPw.confirm ? 'text' : 'password'}
@@ -368,7 +369,7 @@ const Settings = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.school.title')}</h3>
               <div className="flex items-center space-x-6 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.logo')}</label>
+                  <Label>{t('settings.school.logo')}</Label>
                   <label className="relative w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 overflow-hidden">
                     {schoolLogo ? (
                       <img src={URL.createObjectURL(schoolLogo)} className="w-full h-full object-contain" />
@@ -381,7 +382,7 @@ const Settings = () => {
                   </label>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.directorSignature')}</label>
+                  <Label>{t('settings.school.directorSignature')}</Label>
                   <label className="relative w-32 h-16 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 overflow-hidden">
                     {schoolSignature ? (
                       <img src={URL.createObjectURL(schoolSignature)} className="w-full h-full object-contain" />
@@ -396,45 +397,45 @@ const Settings = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.name')}</label>
+                  <Label required>{t('settings.school.name')}</Label>
                   <input required value={schoolForm.name} onChange={(e) => setSchoolForm({...schoolForm, name: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.acronym')}</label>
+                  <Label>{t('settings.school.acronym')}</Label>
                   <input value={schoolForm.acronym} onChange={(e) => setSchoolForm({...schoolForm, acronym: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.phone')}</label>
+                  <Label>{t('settings.school.phone')}</Label>
                   <input value={schoolForm.phone} onChange={(e) => setSchoolForm({...schoolForm, phone: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.email')}</label>
+                  <Label>{t('settings.school.email')}</Label>
                   <input type="email" value={schoolForm.email} onChange={(e) => setSchoolForm({...schoolForm, email: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.address')}</label>
+                <Label>{t('settings.school.address')}</Label>
                 <input value={schoolForm.address} onChange={(e) => setSchoolForm({...schoolForm, address: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.city')}</label>
+                  <Label>{t('settings.school.city')}</Label>
                   <input value={schoolForm.city} onChange={(e) => setSchoolForm({...schoolForm, city: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.country')}</label>
+                  <Label>{t('settings.school.country')}</Label>
                   <input value={schoolForm.country} onChange={(e) => setSchoolForm({...schoolForm, country: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.directorName')}</label>
+                <Label>{t('settings.school.directorName')}</Label>
                 <input value={schoolForm.director_name} onChange={(e) => setSchoolForm({...schoolForm, director_name: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.academicYear')}</label>
+                  <Label>{t('settings.school.academicYear')}</Label>
                   <select value={schoolForm.academic_year}
                     onChange={async (e) => {
                       const year = e.target.value;
@@ -452,20 +453,20 @@ const Settings = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.website')}</label>
+                  <Label>{t('settings.school.website')}</Label>
                   <input value={schoolForm.website} onChange={(e) => setSchoolForm({...schoolForm, website: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.primaryColor')}</label>
+                  <Label>{t('settings.school.primaryColor')}</Label>
                   <div className="flex items-center space-x-2">
                     <input type="color" value={schoolForm.primary_color} onChange={(e) => { setSchoolForm({...schoolForm, primary_color: e.target.value}); applyThemeColors(e.target.value, schoolForm.secondary_color); }} className="w-10 h-10 rounded border cursor-pointer" />
                     <span className="text-xs text-gray-500">{schoolForm.primary_color}</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.school.secondaryColor')}</label>
+                  <Label>{t('settings.school.secondaryColor')}</Label>
                   <div className="flex items-center space-x-2">
                     <input type="color" value={schoolForm.secondary_color} onChange={(e) => setSchoolForm({...schoolForm, secondary_color: e.target.value})} className="w-10 h-10 rounded border cursor-pointer" />
                     <span className="text-xs text-gray-500">{schoolForm.secondary_color}</span>
@@ -509,7 +510,7 @@ const Settings = () => {
             <form onSubmit={handlePreferencesSave} className="max-w-2xl space-y-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.preferences.general')}</h3>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.preferences.language')}</label>
+                <Label>{t('settings.preferences.language')}</Label>
                 <select value={preferencesForm.language}
                   onChange={(e) => setPreferencesForm({ ...preferencesForm, language: e.target.value })}
                   className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -518,7 +519,7 @@ const Settings = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.preferences.academicYear')}</label>
+                <Label>{t('settings.preferences.academicYear')}</Label>
                 <div className="flex space-x-2">
                   <input value={preferencesForm.preferred_academic_year}
                     onChange={(e) => setPreferencesForm({ ...preferencesForm, preferred_academic_year: e.target.value })}
@@ -632,13 +633,13 @@ const Settings = () => {
           <h3 className="text-lg font-bold text-gray-900 mb-4">{editingSemester ? t('settings.semester.edit') : t('settings.semester.add')}</h3>
           <form onSubmit={handleSaveSemester} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.semester.name')}</label>
+              <Label required>{t('settings.semester.name')}</Label>
               <input required value={semesterForm.name} onChange={(e) => setSemesterForm({...semesterForm, name: e.target.value})}
                 placeholder={t('settings.semester.namePlaceholder')}
                 className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.semester.academicYear')}</label>
+              <Label required>{t('settings.semester.academicYear')}</Label>
               <select required value={semesterForm.academic_year} onChange={(e) => setSemesterForm({...semesterForm, academic_year: e.target.value})}
                 className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">{t('settings.semester.select')}</option>
@@ -649,19 +650,19 @@ const Settings = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.semester.startDate')}</label>
+                <Label>{t('settings.semester.startDate')}</Label>
                 <input type="date" value={semesterForm.start_date} onChange={(e) => setSemesterForm({...semesterForm, start_date: e.target.value})}
                   className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.semester.endDate')}</label>
+                <Label>{t('settings.semester.endDate')}</Label>
                 <input type="date" value={semesterForm.end_date} onChange={(e) => setSemesterForm({...semesterForm, end_date: e.target.value})}
                   className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.semester.order')}</label>
+                <Label>{t('settings.semester.order')}</Label>
                 <input type="number" value={semesterForm.order} onChange={(e) => setSemesterForm({...semesterForm, order: parseInt(e.target.value) || 0})}
                   className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -730,12 +731,12 @@ const AlertsTab = ({ communicationService: cs }) => {
       <form onSubmit={handleSend} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.alertsTab.titleField')}</label>
+            <Label required>{t('settings.alertsTab.titleField')}</Label>
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required
               placeholder={t('settings.alertsTab.titlePlaceholder')} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.alertsTab.target')}</label>
+            <Label>{t('settings.alertsTab.target')}</Label>
             <select value={form.target_role} onChange={(e) => setForm({ ...form, target_role: e.target.value })}
               className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="all">{t('settings.alertsTab.allUsers')}</option>
@@ -746,7 +747,7 @@ const AlertsTab = ({ communicationService: cs }) => {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.alertsTab.messageField')}</label>
+          <Label required>{t('settings.alertsTab.messageField')}</Label>
           <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required
             rows="5" placeholder={t('settings.alertsTab.messagePlaceholder')}
             className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />

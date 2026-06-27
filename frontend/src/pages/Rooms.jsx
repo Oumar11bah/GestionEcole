@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Plus, Edit3, Trash2, Search, DoorOpen } from 'lucide-react';
 import { roomService } from '../services/api';
 import MessageModal from '../components/MessageModal';
+import Label from '../components/Label';
 
 const typeLabels = { normal: 'rooms.type.normal', computer: 'rooms.type.computer', laboratory: 'rooms.type.laboratory', library: 'rooms.type.library' };
 const typeColors = { normal: 'bg-blue-100 text-blue-700', computer: 'bg-purple-100 text-purple-700', laboratory: 'bg-green-100 text-green-700', library: 'bg-amber-100 text-amber-700' };
@@ -92,14 +93,14 @@ const Rooms = () => {
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('rooms.search_placeholder')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('rooms.search_placeholder')}</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('rooms.search_placeholder')} className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('rooms.type')}</label>
+            <Label className="text-xs font-semibold text-gray-500 uppercase">{t('rooms.type')}</Label>
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">{t('results.select')}</option>
               {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
@@ -157,23 +158,23 @@ const Rooms = () => {
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.name')} *</label>
+                  <Label required>{t('rooms.name')}</Label>
                   <input required value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.code')} *</label>
+                  <Label required>{t('rooms.code')}</Label>
                   <input required value={form.code} onChange={(e) => setForm({...form, code: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.type')}</label>
+                  <Label>{t('rooms.type')}</Label>
                   <select value={form.room_type} onChange={(e) => setForm({...form, room_type: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm">
                     {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.status')}</label>
+                  <Label>{t('rooms.status')}</Label>
                   <select value={form.status} onChange={(e) => setForm({...form, status: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm">
                     <option value="available">{t('rooms.status.available')}</option>
                     <option value="occupied">{t('rooms.status.occupied')}</option>
@@ -182,21 +183,21 @@ const Rooms = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.capacity')}</label>
+                <Label>{t('rooms.capacity')}</Label>
                 <input type="number" value={form.capacity} onChange={(e) => setForm({...form, capacity: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.building')}</label>
+                  <Label>{t('rooms.building')}</Label>
                   <input value={form.building} onChange={(e) => setForm({...form, building: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.floor')}</label>
+                  <Label>{t('rooms.floor')}</Label>
                   <input type="number" value={form.floor} onChange={(e) => setForm({...form, floor: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('rooms.equipment')}</label>
+                <Label>{t('rooms.equipment')}</Label>
                 <textarea value={form.equipment} onChange={(e) => setForm({...form, equipment: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" rows="2" />
               </div>
               <div className="flex flex-wrap justify-end gap-3 pt-4 border-t">

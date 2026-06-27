@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { X, Upload } from 'lucide-react';
+import Label from '../components/Label';
 import { studentService, classService, cycleService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import { getDefaultAcademicYear, fetchAcademicYears } from '../utils/preferences';
@@ -190,7 +191,7 @@ const StudentForm = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('studentForm.mainInfoTitle')}</h2>
           <div className="flex gap-6 mb-6">
             <div className="flex-shrink-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('studentForm.photoLabel')}</label>
+              <Label>{t('studentForm.photoLabel')}</Label>
               <label className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 overflow-hidden transition-colors">
                 {formData.photo ? (
                   <img src={URL.createObjectURL(formData.photo)} alt={t('studentForm.photoPreviewAlt')} className="w-full h-full object-cover" />
@@ -204,39 +205,39 @@ const StudentForm = () => {
             </div>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.matriculeLabel')}</label>
+                <Label>{t('studentForm.matriculeLabel')}</Label>
                 <input type="text" value={formData.matricule} disabled className="w-full border rounded-lg px-4 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.dobLabel')}</label>
+                <Label required>{t('studentForm.dobLabel')}</Label>
                 <input type="date" required value={formData.date_of_birth} onChange={(e) => handleChange('date_of_birth', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
               </div>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.firstNameLabel')}</label>
+              <Label required>{t('studentForm.firstNameLabel')}</Label>
               <input type="text" required value={formData.first_name} onChange={(e) => handleChange('first_name', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.lastNameLabel')}</label>
+              <Label required>{t('studentForm.lastNameLabel')}</Label>
               <input type="text" required value={formData.last_name} onChange={(e) => handleChange('last_name', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.genderLabel')}</label>
+              <Label>{t('studentForm.genderLabel')}</Label>
               <select value={formData.gender} onChange={(e) => handleChange('gender', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="M">{t('studentForm.genderMale')}</option>
                 <option value="F">{t('studentForm.genderFemale')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.birthPlaceLabel')}</label>
+              <Label>{t('studentForm.birthPlaceLabel')}</Label>
               <input type="text" value={formData.place_of_birth} onChange={(e) => handleChange('place_of_birth', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.phoneLabel')}</label>
+              <Label>{t('studentForm.phoneLabel')}</Label>
               <input type="tel" value={formData.phone_number} onChange={(e) => handleChange('phone_number', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
             </div>
           </div>
@@ -246,7 +247,7 @@ const StudentForm = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('studentForm.schoolInfoTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.cycleLabel')}</label>
+              <Label>{t('studentForm.cycleLabel')}</Label>
               <select value={selectedCycle} onChange={(e) => handleCycleChange(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="">{t('studentForm.selectDefault')}</option>
                 {cycles.map((c) => <option key={c.id} value={c.name}>{c.name === 'primaire' ? t('studentForm.cyclePrimaire') : c.name === 'college' ? t('studentForm.cycleCollege') : t('studentForm.cycleLycee')}</option>)}
@@ -255,7 +256,7 @@ const StudentForm = () => {
 
             {selectedCycle === 'lycee' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.specialtyLabel')}</label>
+                <Label>{t('studentForm.specialtyLabel')}</Label>
                 <select value={selectedSpecialty} onChange={(e) => handleSpecialtyChange(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                   <option value="">{t('studentForm.selectDefault')}</option>
                   {LYCEE_SPECIALTIES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -264,7 +265,7 @@ const StudentForm = () => {
             )}
 
             <div className={selectedCycle === 'lycee' ? '' : ''}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.classLabel')}</label>
+              <Label>{t('studentForm.classLabel')}</Label>
               <select value={formData.class_assigned_id} onChange={(e) => handleChange('class_assigned_id', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="">{t('studentForm.selectDefault')}</option>
                 {getFilteredClasses().map((c) => (
@@ -276,7 +277,7 @@ const StudentForm = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.academicYearLabel')}</label>
+              <Label>{t('studentForm.academicYearLabel')}</Label>
               <select value={formData.academic_year} onChange={(e) => handleChange('academic_year', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 {academicYears.map((y) => (
                   <option key={y.id} value={y.name}>{y.name}</option>
@@ -284,7 +285,7 @@ const StudentForm = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.statusLabel')}</label>
+              <Label>{t('studentForm.statusLabel')}</Label>
               <select value={formData.status} onChange={(e) => handleChange('status', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="active">{t('studentForm.statusActive')}</option>
                 <option value="suspended">{t('studentForm.statusSuspended')}</option>
@@ -298,21 +299,21 @@ const StudentForm = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('studentForm.parentTitle')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.parentFullNameLabel')}</label>
+              <Label required>{t('studentForm.parentFullNameLabel')}</Label>
               <input type="text" required value={formData.parent_full_name} onChange={(e) => handleChange('parent_full_name', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.parentPhoneLabel')}</label>
+              <Label required>{t('studentForm.parentPhoneLabel')}</Label>
               <input type="tel" required value={formData.parent_phone_number} onChange={(e) => handleChange('parent_phone_number', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.parentProfessionLabel')}</label>
+              <Label>{t('studentForm.parentProfessionLabel')}</Label>
               <input type="text" value={formData.parent_profession} onChange={(e) => handleChange('parent_profession', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('studentForm.parentDistrictLabel')}</label>
+              <Label>{t('studentForm.parentDistrictLabel')}</Label>
               <input type="text" value={formData.parent_quartier} onChange={(e) => handleChange('parent_quartier', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>

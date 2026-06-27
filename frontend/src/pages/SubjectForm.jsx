@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { X } from 'lucide-react';
+import Label from '../components/Label';
 import { subjectService, cycleService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 
@@ -109,7 +110,7 @@ const SubjectForm = () => {
 
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('subjectForm.name')}</label>
+            <Label required>{t('subjectForm.name')}</Label>
             <input
               type="text"
               required
@@ -119,7 +120,7 @@ const SubjectForm = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('subjectForm.code')}</label>
+            <Label required>{t('subjectForm.code')}</Label>
             <input
               type="text"
               required
@@ -133,7 +134,7 @@ const SubjectForm = () => {
 
         <div className="grid grid-cols-2 gap-6 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('subjectForm.coefficient')}</label>
+            <Label required>{t('subjectForm.coefficient')}</Label>
             <input
               type="number"
               min="1"
@@ -146,7 +147,7 @@ const SubjectForm = () => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">{t('subjectForm.cycles')}</label>
+          <Label>{t('subjectForm.cycles')}</Label>
           {cycles.length === 0 ? (
             <p className="text-sm text-gray-400 italic">{t('subjectDetail.noCycles')}</p>
           ) : (
@@ -171,7 +172,7 @@ const SubjectForm = () => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">{t('subjectForm.description')}</label>
+          <Label>{t('subjectForm.description')}</Label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}

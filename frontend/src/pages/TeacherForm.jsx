@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { X, Upload } from 'lucide-react';
 import { teacherService, classService, subjectService, teacherSubjectService } from '../services/api';
 import MessageModal from '../components/MessageModal';
+import Label from '../components/Label';
 
 const PHOTO_BASE = 'http://localhost:8000';
 
@@ -171,8 +172,8 @@ const TeacherForm = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('teacherForm.personalInfo')}</h2>
           <div className="flex gap-6 mb-6">
             <div className="flex-shrink-0">
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('teacherForm.photo')}</label>
-              <label className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 overflow-hidden transition-colors">
+              <Label>{t('teacherForm.photo')}</Label>
+              <Label>
                 {formData.photo ? (
                   <img src={URL.createObjectURL(formData.photo)} alt={t('teacherForm.preview')} className="w-full h-full object-cover" />
                 ) : existingPhoto ? (
@@ -181,19 +182,19 @@ const TeacherForm = () => {
                   <Upload className="w-6 h-6 text-gray-400" />
                 )}
                 <input type="file" accept="image/*" onChange={(e) => handleChange('photo', e.target.files[0])} className="hidden" />
-              </label>
+              </Label>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-4 content-start">
               <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.matricule')}</label>
+                <Label>{t('teacherForm.matricule')}</Label>
                 <input type="text" disabled value={formData.matricule} className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed" />
               </div>
               <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.dateOfBirth')}</label>
+                <Label required>{t('teacherForm.dateOfBirth')}</Label>
                 <input type="date" required value={formData.date_of_birth} onChange={(e) => handleChange('date_of_birth', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
               </div>
               <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.gender')}</label>
+                <Label>{t('teacherForm.gender')}</Label>
                 <select value={formData.gender} onChange={(e) => handleChange('gender', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
                   <option value="M">{t('teacherForm.male')}</option>
                   <option value="F">{t('teacherForm.female')}</option>
@@ -203,25 +204,25 @@ const TeacherForm = () => {
           </div>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.firstName')}</label>
+              <Label required>{t('teacherForm.firstName')}</Label>
               <input type="text" required value={formData.first_name} onChange={(e) => handleChange('first_name', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.lastName')}</label>
+              <Label required>{t('teacherForm.lastName')}</Label>
               <input type="text" required value={formData.last_name} onChange={(e) => handleChange('last_name', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.phone')}</label>
+              <Label required>{t('teacherForm.phone')}</Label>
               <input type="tel" required value={formData.phone_number} onChange={(e) => handleChange('phone_number', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.email')}</label>
+              <Label>{t('teacherForm.email')}</Label>
               <input type="email" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.address')}</label>
+              <Label>{t('teacherForm.address')}</Label>
               <input type="text" value={formData.address} onChange={(e) => handleChange('address', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
           </div>
@@ -231,32 +232,32 @@ const TeacherForm = () => {
           <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('teacherForm.professionalInfo')}</h2>
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.specialty')}</label>
+              <Label>{t('teacherForm.specialty')}</Label>
               <input type="text" value={formData.specialty} onChange={(e) => handleChange('specialty', e.target.value)} placeholder={t('teacherForm.specialtyPlaceholder')} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.diploma')}</label>
+              <Label>{t('teacherForm.diploma')}</Label>
               <input type="text" value={formData.diploma} onChange={(e) => handleChange('diploma', e.target.value)} placeholder={t('teacherForm.diplomaPlaceholder')} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.yearsOfExperience')}</label>
+              <Label>{t('teacherForm.yearsOfExperience')}</Label>
               <input type="number" min="0" value={formData.years_of_experience} onChange={(e) => handleChange('years_of_experience', parseInt(e.target.value) || 0)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.contractType')}</label>
+              <Label>{t('teacherForm.contractType')}</Label>
               <select value={formData.contract_type} onChange={(e) => handleChange('contract_type', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
                 <option value="full_time">{t('teacherForm.fullTime')}</option>
                 <option value="part_time">{t('teacherForm.partTime')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.salary')}</label>
+              <Label>{t('teacherForm.salary')}</Label>
               <input type="number" min="0" value={formData.salary} onChange={(e) => handleChange('salary', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('teacherForm.status')}</label>
+              <Label>{t('teacherForm.status')}</Label>
               <select value={formData.is_active} onChange={(e) => handleChange('is_active', e.target.value === 'true')} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors">
                 <option value="true">{t('teacherForm.active')}</option>
                 <option value="false">{t('teacherForm.inactive')}</option>

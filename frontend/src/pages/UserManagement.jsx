@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Label from '../components/Label';
 import { useTranslation } from 'react-i18next';
 import { Search, UserPlus, Eye, EyeOff, Pencil, Trash2, Key, Shield, ShieldOff, X, Check, AlertTriangle } from 'lucide-react';
 import { userService, roleService, authService } from '../services/api';
@@ -422,12 +423,12 @@ const UserManagement = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.usernameRequired')}</label>
+                  <Label required>{t('users.usernameRequired')}</Label>
                   <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.usernamePlaceholder')} />
                 </div>
                 {!editUser && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.password')}</label>
+                    <Label>{t('users.password')}</Label>
                     <div className="relative">
                       <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="w-full px-3 py-2 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.passwordPlaceholder')} />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -437,25 +438,25 @@ const UserManagement = () => {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.firstName')}</label>
+                  <Label>{t('users.firstName')}</Label>
                   <input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.firstName')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.lastName')}</label>
+                  <Label>{t('users.lastName')}</Label>
                   <input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.lastName')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.roleRequired')}</label>
+                  <Label>{t('users.roleRequired')}</Label>
                   <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     {rolesList.map((r) => <option key={r.name} value={r.name}>{r.display_name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.phone')}</label>
+                  <Label>{t('users.phone')}</Label>
                   <input value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.phonePlaceholder')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.gender')}</label>
+                  <Label>{t('users.gender')}</Label>
                   <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">{t('users.genderUnspecified')}</option>
                     <option value="M">{t('users.male')}</option>
@@ -463,13 +464,13 @@ const UserManagement = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.dateOfBirth')}</label>
+                  <Label>{t('users.dateOfBirth')}</Label>
                   <input type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('users.address')}</label>
+                <Label>{t('users.address')}</Label>
                 <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows="2" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.address')} />
               </div>
 
