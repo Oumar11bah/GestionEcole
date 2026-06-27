@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
           const refreshToken = localStorage.getItem('refresh_token');
           if (refreshToken) {
             try {
-              const resp = await axios.post('/api/accounts/token/refresh/', { refresh: refreshToken });
+              const resp = await axios.post('/api/accounts/token/refresh/', { refresh: refreshToken }, { timeout: 10000 });
               localStorage.setItem('access_token', resp.data.access);
             } catch {
               throw new Error('Token expiré');
@@ -82,7 +82,6 @@ export const AuthProvider = ({ children }) => {
             throw new Error('Token expiré');
           }
         }
-        await axios.post('/api/accounts/token/verify/', { token: localStorage.getItem('access_token') });
         const stored = localStorage.getItem(USER_STORAGE_KEY);
         if (stored) {
           const u = JSON.parse(stored);
