@@ -124,10 +124,14 @@ def draw_student_card(c, student, card_w, card_h, x_offset=0, y_offset=0):
     c.setLineWidth(0.5)
     c.roundRect(photo_x, photo_y, photo_w, photo_h, 2.5*mm, fill=0, stroke=1)
 
-    if student.photo and os.path.exists(student.photo.path):
+    if student.photo:
         try:
-            img = RLImage(student.photo.path, photo_w - 1.5*mm, photo_h - 1.5*mm)
-            img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
+            photo_path = student.photo.path
+            if photo_path and not photo_path.startswith(('http://', 'https://')) and os.path.exists(photo_path):
+                img = RLImage(photo_path, photo_w - 1.5*mm, photo_h - 1.5*mm)
+                img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
+            else:
+                raise FileNotFoundError
         except:
             c.setFillColor(LIGHT_GRAY)
             c.roundRect(photo_x + 0.75*mm, photo_y + 0.75*mm, photo_w - 1.5*mm, photo_h - 1.5*mm, 2*mm, fill=1, stroke=0)
