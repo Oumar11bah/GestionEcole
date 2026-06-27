@@ -130,6 +130,13 @@ def draw_student_card(c, student, card_w, card_h, x_offset=0, y_offset=0):
             if photo_path and not photo_path.startswith(('http://', 'https://')) and os.path.exists(photo_path):
                 img = RLImage(photo_path, photo_w - 1.5*mm, photo_h - 1.5*mm)
                 img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
+            elif photo_path and photo_path.startswith(('http://', 'https://')):
+                import requests
+                resp = requests.get(photo_path, timeout=10)
+                from io import BytesIO
+                img_data = BytesIO(resp.content)
+                img = RLImage(img_data, photo_w - 1.5*mm, photo_h - 1.5*mm)
+                img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
             else:
                 raise FileNotFoundError
         except:
