@@ -8,6 +8,13 @@ import { dashboardService } from '../services/api';
 
 const pieColors = ['#3B82F6', '#10B981', '#F59E0B'];
 
+const MODEL_LABELS = {
+  Student: 'Élève', Teacher: 'Enseignant', Grade: 'Note', Class: 'Classe',
+  Subject: 'Matière', Room: 'Salle', Payment: 'Paiement', User: 'Utilisateur',
+  Registration: 'Inscription', Attendance: 'Présence', Result: 'Résultat',
+  Bulletin: 'Bulletin',
+};
+
 const Dashboard = () => {
   const { user, canAccess } = useAuth();
   const { t } = useTranslation();
@@ -126,7 +133,7 @@ const Dashboard = () => {
                     {(user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
                       <td className="py-3 text-gray-600">{act.user}</td>
                     )}
-                    <td className="py-3 text-gray-600">{act.model_name} - {act.object_repr}</td>
+                    <td className="py-3 text-gray-600">{MODEL_LABELS[act.model_name] || act.model_name} - {act.object_repr}</td>
                     <td className="py-3 text-gray-500">{new Date(act.timestamp).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(', ', ' à ')}</td>
                   </tr>
                 ))}
