@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Users, GraduationCap, TrendingUp, Award } from 'lucide-react';
@@ -23,12 +23,18 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchStats = useCallback(() => {
     dashboardService.getStats()
       .then((r) => setStats(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+    window.addEventListener('activityDeleted', fetchStats);
+    return () => window.removeEventListener('activityDeleted', fetchStats);
+  }, [fetchStats]);
 
   if (loading) {
     return (

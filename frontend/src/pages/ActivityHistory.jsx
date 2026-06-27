@@ -116,6 +116,7 @@ const ActivityHistory = () => {
         await userService.deleteActivity(id);
         setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
         await fetchActivities();
+        window.dispatchEvent(new CustomEvent('activityDeleted'));
       } catch (err) {
         console.error('Failed to delete activity:', err);
       } finally {
@@ -133,6 +134,7 @@ const ActivityHistory = () => {
         await userService.bulkDeleteActivities(ids);
         setSelected(new Set());
         await fetchActivities();
+        window.dispatchEvent(new CustomEvent('activityDeleted'));
       } catch (err) {
         console.error('Failed to bulk delete:', err);
       } finally {
