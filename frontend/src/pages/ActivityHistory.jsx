@@ -188,7 +188,7 @@ const ActivityHistory = () => {
               <span className="text-sm text-gray-600 dark:text-gray-400 px-2">{page}</span>
               <button
                 onClick={() => setPage(p => p + 1)}
-                disabled={activities.length < perPage}
+                disabled={total > 0 ? page * perPage >= total : activities.length < perPage}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-4 h-4" />
