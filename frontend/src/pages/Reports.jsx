@@ -163,8 +163,8 @@ const Reports = () => {
     const pageWidth = doc.internal.pageSize.getWidth();
 
     const titles = {
-      students: t('reports.pdfStudents'),
-      payments: t('reports.pdfPayments'),
+      students: t('reports.pdfStudentStats'),
+      payments: t('reports.pdfFinancialReport'),
       attendance: t('reports.pdfAttendance'),
       grades: t('reports.pdfGrades'),
       activity: t('reports.pdfActivity'),
