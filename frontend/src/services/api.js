@@ -83,6 +83,11 @@ api.interceptors.response.use(
         }
       } else {
         isRefreshing = false;
+        if (!originalRequest.url?.includes('/accounts/token/')) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          window.location.href = '/login';
+        }
       }
     }
 

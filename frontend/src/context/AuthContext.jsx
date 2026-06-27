@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
       });
     } catch { /* ignore */ }
     clearAuth();
+    window.location.href = '/login';
   }, [clearAuth]);
 
   const resetInactivityTimer = useCallback(() => {
