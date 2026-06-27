@@ -38,12 +38,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+const REFRESH_TIMEOUT = 10000; // 10s timeout for refresh
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/accounts/token/refresh/')) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -61,7 +63,7 @@ api.interceptors.response.use(
         try {
           const response = await axios.post(`${API_URL}/accounts/token/refresh/`, {
             refresh: refreshToken,
-          });
+          }, { timeout: REFRESH_TIMEOUT });
 
           const { access, refresh } = response.data;
           localStorage.setItem('access_token', access);
