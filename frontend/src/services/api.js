@@ -227,6 +227,8 @@ export const timetableService = {
   create: (data) => api.post('/classes/schedule/', data),
   update: (id, data) => api.put(`/classes/schedule/${id}/`, data),
   delete: (id) => api.delete(`/classes/schedule/${id}/`),
+  checkConflicts: (data) => api.post('/classes/schedule/check_conflicts/', data),
+  availableSlots: (data) => api.post('/classes/schedule/available_slots/', data),
 };
 
 export const registrationService = {
