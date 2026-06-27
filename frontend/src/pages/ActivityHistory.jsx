@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import MessageModal from '../components/MessageModal';
 import {
   ChevronLeft, ChevronRight, Search, RotateCcw, Clock, User,
   Filter, Trash2,
@@ -49,6 +50,9 @@ const ActivityHistory = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState(new Set());
+  const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
+  const showModal = (variant, title, message, onConfirm) => setModal({ open: true, variant, title, message, onConfirm, confirmLabel: title });
+  const closeModal = () => setModal({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const perPage = 50;
 
   const fetchActivities = useCallback(async () => {
@@ -106,33 +110,35 @@ const ActivityHistory = () => {
   };
 
   const handleDeleteOne = async (id) => {
-    if (!window.confirm(t('activity.confirm_delete_one', 'Supprimer cette activité ?'))) return;
-    setDeleting(true);
-    try {
-      await userService.deleteActivity(id);
-      setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
-      await fetchActivities();
-    } catch (err) {
-      console.error('Failed to delete activity:', err);
-    } finally {
-      setDeleting(false);
-    }
+    showModal('warning', t('activity.delete'), t('activity.confirm_delete_one', 'Supprimer cette activité ?'), async () => {
+      setDeleting(true);
+      try {
+        await userService.deleteActivity(id);
+        setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
+        await fetchActivities();
+      } catch (err) {
+        console.error('Failed to delete activity:', err);
+      } finally {
+        setDeleting(false);
+      }
+    });
   };
 
   const handleBulkDelete = async () => {
     const ids = [...selected].filter(Boolean);
     if (ids.length === 0) return;
-    if (!window.confirm(t('activity.confirm_delete_bulk', 'Supprimer {count} activité(s) ?', { count: ids.length }))) return;
-    setDeleting(true);
-    try {
-      await userService.bulkDeleteActivities(ids);
-      setSelected(new Set());
-      await fetchActivities();
-    } catch (err) {
-      console.error('Failed to bulk delete:', err);
-    } finally {
-      setDeleting(false);
-    }
+    showModal('warning', t('activity.delete'), t('activity.confirm_delete_bulk', 'Supprimer {{count}} activité(s) ?', { count: ids.length }), async () => {
+      setDeleting(true);
+      try {
+        await userService.bulkDeleteActivities(ids);
+        setSelected(new Set());
+        await fetchActivities();
+      } catch (err) {
+        console.error('Failed to bulk delete:', err);
+      } finally {
+        setDeleting(false);
+      }
+    });
   };
 
   return (
@@ -298,6 +304,7 @@ const ActivityHistory = () => {
           </div>
         </div>
       )}
+      <MessageModal open={modal.open} onClose={closeModal} title={modal.title} message={modal.message} variant={modal.variant} confirmLabel={modal.confirmLabel} onConfirm={modal.onConfirm} />
     </div>
   );
 };
