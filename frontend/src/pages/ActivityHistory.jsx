@@ -117,6 +117,7 @@ const ActivityHistory = () => {
         setSelected(prev => { const n = new Set(prev); n.delete(id); return n; });
         await fetchActivities();
         window.dispatchEvent(new CustomEvent('activityDeleted'));
+        closeModal();
       } catch (err) {
         console.error('Failed to delete activity:', err);
       } finally {
@@ -135,6 +136,7 @@ const ActivityHistory = () => {
         setSelected(new Set());
         await fetchActivities();
         window.dispatchEvent(new CustomEvent('activityDeleted'));
+        closeModal();
       } catch (err) {
         console.error('Failed to bulk delete:', err);
       } finally {
