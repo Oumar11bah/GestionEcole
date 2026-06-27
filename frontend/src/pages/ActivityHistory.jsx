@@ -110,7 +110,7 @@ const ActivityHistory = () => {
   };
 
   const handleDeleteOne = async (id) => {
-    showModal('warning', t('activity.delete'), t('activity.confirm_delete_one', 'Supprimer cette activité ?'), async () => {
+    showModal('warning', t('activity.delete', 'Supprimer'), t('activity.confirm_delete_one', 'Supprimer cette activité ?'), async () => {
       setDeleting(true);
       try {
         await userService.deleteActivity(id);
