@@ -3,6 +3,20 @@ import jwtDecode from 'jwt-decode';
 
 const API_URL = '/api';
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -30,7 +44,17 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {
@@ -39,15 +63,21 @@ api.interceptors.response.use(
             refresh: refreshToken,
           });
 
-          const { access } = response.data;
+          const { access, refresh } = response.data;
           localStorage.setItem('access_token', access);
+          if (refresh) localStorage.setItem('refresh_token', refresh);
+
+          processQueue(null, access);
 
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return api(originalRequest);
         } catch (refreshError) {
+          processQueue(refreshError, null);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           window.location.href = '/login';
+        } finally {
+          isRefreshing = false;
         }
       }
     }
