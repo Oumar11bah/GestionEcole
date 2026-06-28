@@ -875,15 +875,20 @@ class StudentAverageViewSet(viewsets.ModelViewSet):
                 continue
             if list_type == 'echoues' and decision == 'Admis':
                 continue
+            mention = get_appreciation(a)
             results.append({
                 'student': s,
                 'average': a,
                 'rank': avg.rank,
                 'decision': decision,
+                'mention': mention,
             })
 
         if not results:
             return Response({'error': 'Aucun resultat pour cette liste'}, status=404)
+
+        MENTION_ORDER = {'Tres bien': 0, 'Bien': 1, 'Assez bien': 2, 'Passable': 3, 'Insuffisant': 4}
+        results.sort(key=lambda r: (MENTION_ORDER.get(r['mention'], 99), -r['average']))
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -938,10 +943,27 @@ class StudentAverageViewSet(viewsets.ModelViewSet):
             Paragraph('Decision', th_style),
         ]]
 
-        for i, r in enumerate(results, 1):
+        mention_rows = []
+        current_mention = None
+        idx = 0
+        for r in results:
+            if r['mention'] != current_mention:
+                current_mention = r['mention']
+                mention_label = {'Tres bien': 'Très Bien', 'Bien': 'Bien', 'Assez bien': 'Assez Bien', 'Passable': 'Passable', 'Insuffisant': 'Insuffisant'}.get(current_mention, current_mention)
+                mention_color = {'Tres bien': '#1e40af', 'Bien': '#16a34a', 'Assez bien': '#ca8a04', 'Passable': '#ea580c', 'Insuffisant': '#dc2626'}.get(current_mention, '#6b7280')
+                mention_rows.append(len(table_data))
+                table_data.append([
+                    Paragraph('', th_style),
+                    Paragraph('', th_style),
+                    Paragraph(f"<b>{mention_label}</b>", ParagraphStyle('mention', parent=td_left, textColor=HexColor(mention_color), fontName='Helvetica-Bold')),
+                    Paragraph('', th_style),
+                    Paragraph('', th_style),
+                    Paragraph('', th_style),
+                ])
+            idx += 1
             dec_color = GREEN if r['decision'] == 'Admis' else ORANGE
             table_data.append([
-                Paragraph(str(i), td_style),
+                Paragraph(str(idx), td_style),
                 Paragraph(r['student'].matricule, td_style),
                 Paragraph(f"{r['student'].last_name} {r['student'].first_name}", td_left),
                 Paragraph(f"{r['average']:.2f}", td_style),
@@ -955,13 +977,16 @@ class StudentAverageViewSet(viewsets.ModelViewSet):
             ('GRID', (0,0), (-1,-1), 0.5, HexColor('#d1d5db')),
             ('BACKGROUND', (0,0), (-1,0), PRIMARY),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('TOPPADDING', (0,0), (-1,-1), 4),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
             ('LEFTPADDING', (0,0), (-1,-1), 3),
             ('RIGHTPADDING', (0,0), (-1,-1), 3),
         ]
         for i in range(1, len(table_data)):
-            if i % 2 == 0:
+            if i in mention_rows:
+                style_cmds.append(('BACKGROUND', (0,i), (-1,i), HexColor('#f1f5f9')))
+                style_cmds.append(('SPAN', (0,i), (-1,i)))
+            elif (i - sum(1 for m in mention_rows if m < i)) % 2 == 1:
                 style_cmds.append(('BACKGROUND', (0,i), (-1,i), ROW_ALT))
         grade_table.setStyle(TableStyle(style_cmds))
         elements.append(grade_table)
