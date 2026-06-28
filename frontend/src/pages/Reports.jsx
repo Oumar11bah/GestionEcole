@@ -86,7 +86,7 @@ const Reports = () => {
           payments.forEach((p) => {
             const status = p.status || 'unknown';
             byStatus[status] = (byStatus[status] || 0) + 1;
-            if (p.status === 'completed') totalAmount += parseFloat(p.amount_paid || 0);
+            if (p.status === 'completed' || p.status === 'partial') totalAmount += parseFloat(p.amount_paid || 0);
           });
           setData({ total: payments.length, totalAmount, byStatus });
           break;
@@ -258,7 +258,8 @@ const Reports = () => {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(22, 163, 74);
-      doc.text(`${t('reports.totalCollected')}: ${(data?.totalAmount || 0).toLocaleString()} GNF`, 20, startY + 11);
+      const totalDisplay = String(Math.round(data?.totalAmount || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      doc.text(`${t('reports.totalCollected')}: ${totalDisplay} GNF`, 20, startY + 11);
       doc.setTextColor(0, 0, 0);
 
       const statusRows = Object.entries(data?.byStatus || {}).map(([status, count]) => [
@@ -283,7 +284,7 @@ const Reports = () => {
       const paymentRows = rawData.map((p) => [
         typeof p.student === 'object' ? `${p.student?.first_name || ''} ${p.student?.last_name || ''}`.trim() : (p.student || ''),
         typeof p.fee_type === 'object' ? (p.fee_type?.name || '') : (p.fee_type || ''),
-        `${parseFloat(p.amount_paid || 0).toLocaleString()} GNF`,
+        `${String(Math.round(parseFloat(p.amount_paid || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} GNF`,
         p.payment_method === 'cash' ? t('reports.cash') : p.payment_method === 'mobile_money' ? t('reports.mobileMoney') : p.payment_method === 'bank_transfer' ? t('reports.bankTransfer') : p.payment_method || '',
         p.status === 'completed' ? t('reports.paid') : p.status === 'pending' ? t('reports.pending') : p.status || '',
         p.payment_date || '',
