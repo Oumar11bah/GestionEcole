@@ -669,7 +669,7 @@ const Grades = () => {
                       <td className="px-1 py-1.5 text-center w-[65px]">
                         {sa.avg != null ? (
                           <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-medium ${getMention(sa.avg, maxScore).color}`}>
-                            {sa.avg.toFixed(2)}
+                            {getMention(sa.avg, maxScore).label}
                           </span>
                         ) : <span className="text-gray-300">{EMPTY}</span>}
                       </td>
