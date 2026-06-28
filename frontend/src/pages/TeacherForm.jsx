@@ -173,7 +173,7 @@ const TeacherForm = () => {
           <div className="flex gap-6 mb-6">
             <div className="flex-shrink-0">
               <Label>{t('teacherForm.photo')}</Label>
-              <Label>
+              <label className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 overflow-hidden transition-colors">
                 {formData.photo ? (
                   <img src={URL.createObjectURL(formData.photo)} alt={t('teacherForm.preview')} className="w-full h-full object-cover" />
                 ) : existingPhoto ? (
@@ -182,7 +182,7 @@ const TeacherForm = () => {
                   <Upload className="w-6 h-6 text-gray-400" />
                 )}
                 <input type="file" accept="image/*" onChange={(e) => handleChange('photo', e.target.files[0])} className="hidden" />
-              </Label>
+              </label>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-4 content-start">
               <div className="col-span-1">
