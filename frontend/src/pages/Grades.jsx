@@ -232,7 +232,7 @@ const Grades = () => {
       };
     });
 
-    const sorted = [...data].sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
+    const sorted = [...data].sort((a, b) => (a.avg ?? -1) - (b.avg ?? -1));
     return data.map((d) => ({
       ...d,
       rank: sorted.indexOf(d) + 1,
