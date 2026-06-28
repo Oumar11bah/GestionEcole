@@ -2,6 +2,9 @@ import io
 import os
 from datetime import datetime
 
+import requests
+from io import BytesIO
+
 import qrcode
 from PIL import Image
 from reportlab.lib.pagesizes import A4
@@ -126,20 +129,20 @@ def draw_student_card(c, student, card_w, card_h, x_offset=0, y_offset=0):
 
     if student.photo:
         try:
-            photo_path = student.photo.path
-            if photo_path and not photo_path.startswith(('http://', 'https://')) and os.path.exists(photo_path):
-                img = RLImage(photo_path, photo_w - 1.5*mm, photo_h - 1.5*mm)
-                img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
-            elif photo_path and photo_path.startswith(('http://', 'https://')):
-                import requests
-                resp = requests.get(photo_path, timeout=10)
-                from io import BytesIO
+            photo_url = student.photo.url
+            if photo_url.startswith(('http://', 'https://')):
+                resp = requests.get(photo_url, timeout=10)
                 img_data = BytesIO(resp.content)
                 img = RLImage(img_data, photo_w - 1.5*mm, photo_h - 1.5*mm)
                 img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
             else:
-                raise FileNotFoundError
-        except:
+                photo_path = student.photo.path
+                if os.path.exists(photo_path):
+                    img = RLImage(photo_path, photo_w - 1.5*mm, photo_h - 1.5*mm)
+                    img.drawOn(c, photo_x + 0.75*mm, photo_y + 0.75*mm)
+                else:
+                    raise FileNotFoundError
+        except Exception:
             c.setFillColor(LIGHT_GRAY)
             c.roundRect(photo_x + 0.75*mm, photo_y + 0.75*mm, photo_w - 1.5*mm, photo_h - 1.5*mm, 2*mm, fill=1, stroke=0)
             c.setFillColor(MEDIUM_GRAY)
