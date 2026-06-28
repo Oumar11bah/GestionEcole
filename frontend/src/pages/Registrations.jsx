@@ -191,7 +191,7 @@ const Registrations = () => {
           {formMode === 'renew' ? (
             <>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.search_student_label')} *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.search_student_label')} <span className="text-red-500">*</span></label>
                 <input type="text" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)} placeholder={t('registrations.search_student_placeholder')} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 {studentSearch && filteredStudents.length > 0 && (
                   <div className="mt-1 border rounded-lg max-h-48 overflow-y-auto">
@@ -215,7 +215,7 @@ const Registrations = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.new_class')} *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.new_class')} <span className="text-red-500">*</span></label>
                   <select required value={formData.class_assigned} onChange={(e) => handleChange('class_assigned', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm">
                     <option value="">{t('registrations.select')}</option>
                     {(classes || []).map((c) => (
@@ -253,7 +253,7 @@ const Registrations = () => {
                     <input type="text" value={formData.matricule} disabled className="w-full border rounded-lg px-4 py-2 text-sm bg-gray-100 text-gray-500 cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.date_of_birth')} *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.date_of_birth')} <span className="text-red-500">*</span></label>
                     <input type="date" required value={formData.date_of_birth} onChange={(e) => handleChange('date_of_birth', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                   </div>
                 </div>
@@ -261,18 +261,18 @@ const Registrations = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.first_name')} *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.first_name')} <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.first_name} onChange={(e) => handleChange('first_name', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.last_name')} *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.last_name')} <span className="text-red-500">*</span></label>
                   <input type="text" required value={formData.last_name} onChange={(e) => handleChange('last_name', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.gender')} *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.gender')} <span className="text-red-500">*</span></label>
                   <select value={formData.gender} onChange={(e) => handleChange('gender', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <option value="M">{t('registrations.male')}</option>
                     <option value="F">{t('registrations.female')}</option>
@@ -314,7 +314,7 @@ const Registrations = () => {
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('registrations.assignment')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.class')} *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('registrations.class')} <span className="text-red-500">*</span></label>
                     <select required value={formData.class_assigned} onChange={(e) => handleChange('class_assigned', e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm">
                       <option value="">{t('registrations.select')}</option>
                       {(classes || []).map((c) => (
