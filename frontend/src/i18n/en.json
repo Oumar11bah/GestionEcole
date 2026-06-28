@@ -1168,6 +1168,7 @@
   "users.online": "Online",
   "users.onlineUsers": "Online users",
   "users.password": "Password",
+  "users.passwordReset": "Password reset",
   "users.passwordPlaceholder": "Leave empty for auto-generation",
   "users.phone": "Phone",
   "users.phonePlaceholder": "+224 XXX XXX XXX",

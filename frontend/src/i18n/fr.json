@@ -1168,6 +1168,7 @@
   "users.online": "En ligne",
   "users.onlineUsers": "Utilisateurs connectés",
   "users.password": "Mot de passe",
+  "users.passwordReset": "Réinitialisation du mot de passe",
   "users.passwordPlaceholder": "Laisser vide pour générer auto",
   "users.phone": "Téléphone",
   "users.phonePlaceholder": "+224 XXX XXX XXX",
