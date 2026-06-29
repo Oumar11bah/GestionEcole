@@ -266,22 +266,20 @@ const Students = () => {
         </div>
       </div>
 
-      {filterClass === '' && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{students.length}</div>
+          <div className="text-2xl font-bold text-blue-600">{filteredStudents.length}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">{t('students.total')}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-          <div className="text-2xl font-bold text-indigo-600">{students.filter((s) => s.gender === 'M').length}</div>
+          <div className="text-2xl font-bold text-indigo-600">{filteredStudents.filter((s) => s.gender === 'M').length}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">{t('students.male')}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center">
-          <div className="text-2xl font-bold text-pink-600">{students.filter((s) => s.gender === 'F').length}</div>
+          <div className="text-2xl font-bold text-pink-600">{filteredStudents.filter((s) => s.gender === 'F').length}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">{t('students.female')}</div>
         </div>
       </div>
-      )}
 
       {filterClass !== '' && (
       <div className="bg-white rounded-xl shadow overflow-x-auto">
