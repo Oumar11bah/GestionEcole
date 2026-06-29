@@ -283,6 +283,7 @@ const Students = () => {
       </div>
       )}
 
+      {filterClass !== '' && (
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -349,6 +350,7 @@ const Students = () => {
           </tbody>
         </table>
       </div>
+      )} 
     </div>
       <MessageModal
         open={modal.open}
