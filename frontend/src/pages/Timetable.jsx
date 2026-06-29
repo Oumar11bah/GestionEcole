@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import MessageModal from '../components/MessageModal';
 import { Plus, Trash2, Pencil, Calendar, MapPin, User, Clock, BookOpen, School, X, Save, Printer, Download, AlertTriangle, RefreshCw, Phone, Mail, Globe, GraduationCap, CalendarClock, Check } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { timetableService, classService, subjectService, teacherService, roomService, cycleService, teacherSubjectService, schoolService } from '../services/api';
 import { getPreferredAcademicYear, fetchAcademicYears } from '../utils/preferences';
 import jsPDF from 'jspdf';
@@ -34,6 +35,7 @@ const formatTime = (t) => t ? t.slice(0, 5).replace(':', 'H') : '';
 
 const Timetable = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const [entries, setEntries] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -52,6 +54,8 @@ const Timetable = () => {
   const [filterRoom, setFilterRoom] = useState('');
   const [filterDay, setFilterDay] = useState('');
   const [filterYear, setFilterYear] = useState('');
+
+  const isTeacher = user?.profile?.role === 'enseignant';
 
   const [showForm, setShowForm] = useState(false);
   const [editEntry, setEditEntry] = useState(null);
@@ -548,10 +552,12 @@ const Timetable = () => {
             className="flex items-center space-x-1 px-3 py-1.5 bg-emerald-700 text-white rounded text-xs font-medium hover:bg-emerald-800 disabled:opacity-50">
             <Download className="w-3.5 h-3.5" /><span>{t('timetable.pdf')}</span>
           </button>
+          {!isTeacher && (
           <button onClick={() => { setShowForm(true); setEditEntry(null); setFormData({ class_assigned_id: filterClass || '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
             className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
             <Plus className="w-3.5 h-3.5" /><span>{t('timetable.add_course')}</span>
           </button>
+          )}
           <span className="text-xs text-gray-400">
             {filteredEntries.length} {t('timetable.courses')}{totalConflicts > 0 ? <span className="text-red-600 font-medium ml-1">| {totalConflicts} {t('timetable.conflicts')}</span> : ''}
           </span>
@@ -586,12 +592,14 @@ const Timetable = () => {
             })}
             {filteredClasses.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-4">{t('timetable.no_classes')}</p>}
           </div>
+          {!isTeacher && (
           <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center">
             <button onClick={() => { setShowForm(true); setFormData({ class_assigned_id: '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
               className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
               <Plus className="w-3.5 h-3.5" /><span>{t('timetable.add_course')}</span>
             </button>
           </div>
+          )}
         </div>
       ) : filteredEntries.length === 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
@@ -600,10 +608,12 @@ const Timetable = () => {
           <p className="text-sm text-gray-500 mb-4">
             {filterClass ? t('timetable.no_timetable') : t('timetable.adjust_filters')}
           </p>
+          {!isTeacher && (
           <button onClick={() => { setShowForm(true); setFormData({ class_assigned_id: filterClass || '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
             className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
             <Plus className="w-4 h-4" /><span>{t('timetable.add_course')}</span>
           </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -647,6 +657,7 @@ const Timetable = () => {
                                 <AlertTriangle className="w-2.5 h-2.5 text-white" />
                               </div>
                             )}
+                            {!isTeacher && (
                             <div className="absolute top-1 left-1 flex space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
                                 className="p-0.5 bg-white border border-gray-300 rounded text-gray-500 hover:text-blue-600" title={t('timetable.edit')}>
@@ -657,6 +668,7 @@ const Timetable = () => {
                                 <Trash2 className="w-3 h-3" />
                               </button>
                             </div>
+                            )}
                           </td>
                         );
                       })}
