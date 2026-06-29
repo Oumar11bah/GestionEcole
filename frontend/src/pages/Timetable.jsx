@@ -35,7 +35,7 @@ const formatTime = (t) => t ? t.slice(0, 5).replace(':', 'H') : '';
 
 const Timetable = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, canAccess } = useAuth();
   const [searchParams] = useSearchParams();
   const [entries, setEntries] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -55,7 +55,7 @@ const Timetable = () => {
   const [filterDay, setFilterDay] = useState('');
   const [filterYear, setFilterYear] = useState('');
 
-  const isTeacher = user?.profile?.role === 'enseignant';
+  const canWriteTimetable = canAccess?.('users');
 
   const [showForm, setShowForm] = useState(false);
   const [editEntry, setEditEntry] = useState(null);
@@ -552,7 +552,7 @@ const Timetable = () => {
             className="flex items-center space-x-1 px-3 py-1.5 bg-emerald-700 text-white rounded text-xs font-medium hover:bg-emerald-800 disabled:opacity-50">
             <Download className="w-3.5 h-3.5" /><span>{t('timetable.pdf')}</span>
           </button>
-          {!isTeacher && (
+          {canWriteTimetable && (
           <button onClick={() => { setShowForm(true); setEditEntry(null); setFormData({ class_assigned_id: filterClass || '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
             className="flex items-center space-x-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
             <Plus className="w-3.5 h-3.5" /><span>{t('timetable.add_course')}</span>
@@ -592,7 +592,7 @@ const Timetable = () => {
             })}
             {filteredClasses.length === 0 && <p className="text-sm text-gray-400 col-span-full text-center py-4">{t('timetable.no_classes')}</p>}
           </div>
-          {!isTeacher && (
+          {canWriteTimetable && (
           <div className="mt-4 pt-3 border-t border-gray-100 flex justify-center">
             <button onClick={() => { setShowForm(true); setFormData({ class_assigned_id: '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
               className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
@@ -608,7 +608,7 @@ const Timetable = () => {
           <p className="text-sm text-gray-500 mb-4">
             {filterClass ? t('timetable.no_timetable') : t('timetable.adjust_filters')}
           </p>
-          {!isTeacher && (
+          {canWriteTimetable && (
           <button onClick={() => { setShowForm(true); setFormData({ class_assigned_id: filterClass || '', day: 'monday', start_time: '08:00', end_time: '10:00', subject_name: '', teacher_name: '', room: '', observation: '' }); }}
             className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
             <Plus className="w-4 h-4" /><span>{t('timetable.add_course')}</span>
@@ -657,7 +657,7 @@ const Timetable = () => {
                                 <AlertTriangle className="w-2.5 h-2.5 text-white" />
                               </div>
                             )}
-                            {!isTeacher && (
+                            {canWriteTimetable && (
                             <div className="absolute top-1 left-1 flex space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button onClick={(e) => { e.stopPropagation(); handleEdit(entry); }}
                                 className="p-0.5 bg-white border border-gray-300 rounded text-gray-500 hover:text-blue-600" title={t('timetable.edit')}>
