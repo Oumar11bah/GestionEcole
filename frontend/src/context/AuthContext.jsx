@@ -90,6 +90,7 @@ export const AuthProvider = ({ children }) => {
             const res = await userService.getMyProfile();
             if (res.data?.profile?.permissions) {
               u.profile.permissions = res.data.profile.permissions;
+              u.teacher_profile = res.data.teacher_profile;
               localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(u));
               setUser({ ...u });
             }
@@ -107,8 +108,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authService.login(credentials);
-      const { access, refresh, user, profile } = response.data;
-      const userData = { ...user, profile };
+      const { access, refresh, user, profile, teacher_profile } = response.data;
+      const userData = { ...user, profile, teacher_profile };
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);

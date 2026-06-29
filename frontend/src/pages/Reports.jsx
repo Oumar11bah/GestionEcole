@@ -23,6 +23,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState([]);
   const [filterClass, setFilterClass] = useState('');
+  const [filterDate, setFilterDate] = useState('');
 
   const reportOptions = [
     { id: 'students', label: t('reports.studentsStats'), icon: Users },
@@ -35,6 +36,7 @@ const Reports = () => {
   useEffect(() => {
     setData(null);
     setRawData(null);
+    setFilterDate('');
     fetchReport();
     if (reportType === 'grades') {
       classService.getAll()
@@ -49,6 +51,10 @@ const Reports = () => {
   useEffect(() => {
     if (reportType === 'grades' && filterClass) fetchReport();
   }, [filterClass]);
+
+  useEffect(() => {
+    if (reportType === 'attendance' && filterDate) fetchReport();
+  }, [filterDate]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -93,7 +99,9 @@ const Reports = () => {
         }
 
         case 'attendance': {
-          response = await attendanceService.getAll();
+          const attParams = {};
+          if (filterDate) attParams.date = filterDate;
+          response = await attendanceService.getAll(attParams);
           const records = Array.isArray(response.data?.results) ? response.data.results : Array.isArray(response.data) ? response.data : [];
           setRawData(records);
           const attByStatus = {};
@@ -281,7 +289,9 @@ const Reports = () => {
       doc.setFont('helvetica', 'bold');
       doc.text(t('reports.paymentDetails'), 14, payStart);
 
-      const paymentRows = rawData.map((p) => [
+      const paymentRows = rawData
+        .slice().sort((a, b) => new Date(b.payment_date || b.created_at) - new Date(a.payment_date || a.created_at))
+        .map((p) => [
         typeof p.student === 'object' ? `${p.student?.first_name || ''} ${p.student?.last_name || ''}`.trim() : (p.student || ''),
         typeof p.fee_type === 'object' ? (p.fee_type?.name || '') : (p.fee_type || ''),
         `${String(Math.round(parseFloat(p.amount_paid || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} GNF`,
@@ -331,7 +341,9 @@ const Reports = () => {
       doc.setFont('helvetica', 'bold');
       doc.text(t('reports.attendanceDetails'), 14, attStart);
 
-      const attRows = rawData.map((r) => [
+      const attRows = rawData
+        .slice().sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
+        .map((r) => [
         typeof r.student === 'object' ? `${r.student?.first_name || ''} ${r.student?.last_name || ''}`.trim() : (r.student || ''),
         r.date || '',
         r.status === 'present' ? t('reports.presentLabel') : r.status === 'absent' ? t('reports.absentLabel') : r.status === 'late' ? t('reports.lateLabel') : r.status === 'excused' ? t('reports.excusedLabel') : r.status || '',
@@ -406,7 +418,9 @@ const Reports = () => {
     }
 
     else if (reportType === 'activity') {
-      const actRows = rawData.map((a) => [
+      const actRows = rawData
+        .slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .map((a) => [
         a.user || '\u2014',
         a.action === 'create' ? t('reports.create') : a.action === 'update' ? t('reports.update') : t('reports.delete'),
         modelLabel(a.model_name),
@@ -487,13 +501,20 @@ const Reports = () => {
       ) : data ? (
         <div className="bg-white rounded-xl shadow p-6">
           {reportType === 'students' && (
-            <StudentsReport data={data} />
+            <StudentsReport data={data} rawData={rawData} />
           )}
           {reportType === 'payments' && (
-            <PaymentsReport data={data} />
+            <PaymentsReport data={data} rawData={rawData} />
           )}
           {reportType === 'attendance' && (
-            <AttendanceReport data={data} />
+            <div>
+              <div className="mb-4 flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">{t('reports.date')}</label>
+                <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)}
+                  className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <AttendanceReport data={data} rawData={rawData} />
+            </div>
           )}
           {reportType === 'grades' && (
             <>
@@ -504,7 +525,7 @@ const Reports = () => {
                   {classes.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
                 </select>
               </div>
-              <GradesReport data={data} />
+              <GradesReport data={data} rawData={rawData} />
             </>
           )}
           {reportType === 'activity' && (
@@ -520,7 +541,7 @@ const Reports = () => {
   );
 };
 
-const StudentsReport = ({ data }) => {
+const StudentsReport = ({ data, rawData }) => {
   const { t } = useTranslation();
   const byGender = data?.byGender || { M: 0, F: 0 };
   const byClass = data?.byClass || {};
@@ -542,11 +563,34 @@ const StudentsReport = ({ data }) => {
           </div>
         ))}
       </div>
+      {rawData?.length > 0 && (
+        <div className="mt-6 overflow-x-auto">
+          <h4 className="font-medium text-gray-700 mb-2">{t('reports.studentList')}</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b bg-gray-50">
+                <th className="px-3 py-2 font-medium">{t('reports.matricule')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.fullName')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.date')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawData.map((s) => (
+                <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-600">{s.matricule || '\u2014'}</td>
+                  <td className="px-3 py-2 font-medium text-gray-900">{s.first_name} {s.last_name}</td>
+                  <td className="px-3 py-2 text-gray-500">{s.created_at ? new Date(s.created_at).toLocaleDateString('fr-FR') : '\u2014'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-const PaymentsReport = ({ data }) => {
+const PaymentsReport = ({ data, rawData }) => {
   const { t } = useTranslation();
   const byStatus = data?.byStatus || {};
   const totalAmount = data?.totalAmount || 0;
@@ -566,11 +610,38 @@ const PaymentsReport = ({ data }) => {
           </div>
         ))}
       </div>
+      {rawData?.length > 0 && (
+        <div className="mt-6 overflow-x-auto">
+          <h4 className="font-medium text-gray-700 mb-2">{t('reports.paymentDetails')}</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b bg-gray-50">
+                <th className="px-3 py-2 font-medium">{t('reports.studentCol')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.amount')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.date')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawData.map((p) => (
+                <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-900">
+                    {typeof p.student === 'object' ? `${p.student?.first_name || ''} ${p.student?.last_name || ''}`.trim() : (p.student || '\u2014')}
+                  </td>
+                  <td className="px-3 py-2 font-semibold text-blue-600">
+                    {String(Math.round(parseFloat(p.amount_paid || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} GNF
+                  </td>
+                  <td className="px-3 py-2 text-gray-500">{p.payment_date ? new Date(p.payment_date).toLocaleDateString('fr-FR') : '\u2014'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-const AttendanceReport = ({ data }) => {
+const AttendanceReport = ({ data, rawData }) => {
   const { t } = useTranslation();
   return (
     <div>
@@ -581,11 +652,45 @@ const AttendanceReport = ({ data }) => {
         <Stat label={t('reports.absentLabel')} value={data.absent || 0} />
         <Stat label={t('reports.attendanceRate')} value={`${data.rate || 0}%`} />
       </div>
+      {rawData?.length > 0 && (
+        <div className="mt-6 overflow-x-auto">
+          <h4 className="font-medium text-gray-700 mb-2">{t('reports.attendanceDetails')}</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b bg-gray-50">
+                <th className="px-3 py-2 font-medium">{t('reports.studentCol')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.date')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.statusLabel')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawData.map((r) => (
+                <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-900">
+                    {typeof r.student === 'object' ? `${r.student?.first_name || ''} ${r.student?.last_name || ''}`.trim() : (r.student || '\u2014')}
+                  </td>
+                  <td className="px-3 py-2 text-gray-500">{r.date ? new Date(r.date).toLocaleDateString('fr-FR') : '\u2014'}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                      r.status === 'present' ? 'bg-green-100 text-green-700' :
+                      r.status === 'absent' ? 'bg-red-100 text-red-700' :
+                      r.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
+                      r.status === 'excused' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {r.status === 'present' ? t('reports.presentLabel') : r.status === 'absent' ? t('reports.absentLabel') : r.status === 'late' ? t('reports.lateLabel') : r.status === 'excused' ? t('reports.excusedLabel') : r.status || '\u2014'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-const GradesReport = ({ data }) => {
+const GradesReport = ({ data, rawData }) => {
   const { t } = useTranslation();
   const getStudentName = (a) => {
     if (typeof a.student === 'object' && a.student !== null) {
@@ -606,25 +711,30 @@ const GradesReport = ({ data }) => {
         <Stat label={t('reports.failingLabel')} value={data.failing || 0} />
         <Stat label={t('reports.successRate')} value={`${data.rate || 0}%`} />
       </div>
-      {data.averages?.length > 0 && (
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-sm text-gray-500 border-b bg-gray-50">
-              <th className="px-4 py-2 font-medium">{t('reports.studentCol')}</th>
-              <th className="px-4 py-2 font-medium">{t('reports.averageLabel')}</th>
-              <th className="px-4 py-2 font-medium">{t('reports.rankLabel')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.averages.slice(0, 20).map((a) => (
-              <tr key={a.id} className="border-b border-gray-100">
-                <td className="px-4 py-2 text-sm">{getStudentName(a)}</td>
-                <td className="px-4 py-2 font-semibold text-blue-600">{a.average}/{maxScore}</td>
-                <td className="px-4 py-2 text-sm">#{a.rank || '\u2014'}</td>
+      {rawData?.length > 0 && (
+        <div className="overflow-x-auto">
+          <h4 className="font-medium text-gray-700 mb-2">{t('reports.studentRanking')}</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b bg-gray-50">
+                <th className="px-3 py-2 font-medium">{t('reports.studentCol')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.averageLabel')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.rankLabel')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.date')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rawData.map((a) => (
+                <tr key={a.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-900">{getStudentName(a)}</td>
+                  <td className="px-3 py-2 font-semibold text-blue-600">{a.average}/{maxScore}</td>
+                  <td className="px-3 py-2 text-sm text-gray-600">#{a.rank || '\u2014'}</td>
+                  <td className="px-3 py-2 text-gray-500">{a.calculated_at ? new Date(a.calculated_at).toLocaleDateString('fr-FR') : '\u2014'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -632,9 +742,15 @@ const GradesReport = ({ data }) => {
 
 const ActivityReport = ({ data, onRefresh }) => {
   const { t } = useTranslation();
+  const modelLabel = (name) => t(MODEL_KEYS[name]) || name;
   const [deleting, setDeleting] = useState(null);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
-  const activities = data?.activities || [];
+  const [sortDir, setSortDir] = useState('desc');
+  const activities = (data?.activities || []).slice().sort((a, b) => {
+    const da = new Date(a.timestamp).getTime();
+    const db = new Date(b.timestamp).getTime();
+    return sortDir === 'desc' ? db - da : da - db;
+  });
 
   const showModal = (variant, title, message, onConfirm) => {
     setModal({ open: true, variant, title, message, onConfirm, confirmLabel: onConfirm ? t('reports.confirm') : '' });
@@ -671,12 +787,19 @@ const ActivityReport = ({ data, onRefresh }) => {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{t('reports.activityHistory')}</h3>
-        {activities.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 font-medium transition-colors">
+            <Clock className="w-3.5 h-3.5" />
+            {sortDir === 'desc' ? t('reports.newestFirst') : t('reports.oldestFirst')}
+          </button>
+          {activities.length > 0 && (
           <button onClick={handleClearAll} disabled={deleting === 'all'}
             className="flex items-center space-x-1.5 text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">
             <Trash2 className="w-3.5 h-3.5" /><span>{t('reports.clearAll')}</span>
           </button>
         )}
+        </div>
       </div>
       <div className="mb-4">
         <Stat label={t('reports.totalActions')} value={data.total || 0} />

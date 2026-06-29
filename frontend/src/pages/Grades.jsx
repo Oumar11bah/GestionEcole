@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Save, Upload, Download, Printer, FileSpreadsheet, Search, X, AlertCircle, CheckCircle, Award, TrendingUp, Star, Ban } from 'lucide-react';
+import { Save, Upload, Download, Printer, FileSpreadsheet, Search, X, AlertCircle, CheckCircle, Award, TrendingUp, Star, Ban, Lock, Unlock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { gradeService, classService, teacherSubjectService, studentService, subjectService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import jsPDF from 'jspdf';
@@ -20,6 +21,7 @@ const EMPTY = '\u2014';
 
 const Grades = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const APPRECIATIONS = [
     { threshold: 0.9, key: 'grades.excellent', color: 'bg-green-100 text-green-800' },
@@ -36,6 +38,13 @@ const Grades = () => {
     const found = APPRECIATIONS.find((a) => ratio >= a.threshold);
     const entry = found || APPRECIATIONS[APPRECIATIONS.length - 1];
     return { ...entry, label: t(entry.key) };
+  };
+
+  const mentionSortKey = (sa) => {
+    if (sa.avg == null || maxScore <= 0) return 999;
+    const ratio = sa.avg / maxScore;
+    const idx = APPRECIATIONS.findIndex((a) => ratio >= a.threshold);
+    return idx < 0 ? 999 : idx;
   };
 
   const [searchParams] = useSearchParams();
@@ -58,6 +67,15 @@ const Grades = () => {
   const [importing, setImporting] = useState(false);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const tableRef = useRef(null);
+
+  const teacherAssignments = user?.teacher_profile?.subject_assignments || [];
+  const teacherClassIds = [...new Set(teacherAssignments.map((a) => a.class_assigned_id))];
+  const availableClasses = user?.profile?.role === 'enseignant'
+    ? classes.filter((c) => teacherClassIds.includes(c.id))
+    : classes;
+  const availableSubjects = user?.profile?.role === 'enseignant' && selectedClass
+    ? subjects.filter((s) => teacherAssignments.some((a) => a.subject_id === s.id && a.class_assigned_id === parseInt(selectedClass)))
+    : subjects;
 
   const showModal = (variant, title, message, onConfirm) => {
     setModal({ open: true, variant, title, message, onConfirm, confirmLabel: onConfirm ? t('grades.confirm') : '' });
@@ -122,7 +140,7 @@ const Grades = () => {
         const sid = g.student?.id || g.student_id;
         const tsid = g.teacher_subject || g.teacher_subject_id;
         if (sid && tsid) {
-          map[`${sid}-${tsid}`] = { id: g.id, score: g.composition != null ? parseFloat(g.composition) : null };
+          map[`${sid}-${tsid}`] = { id: g.id, score: g.composition != null ? parseFloat(g.composition) : null, locked: g.locked || false };
         }
       });
       setGradeMap(map);
@@ -137,9 +155,34 @@ const Grades = () => {
     return entry?.score;
   };
 
+  const isGradeLocked = (studentId, tsId) => {
+    const entry = gradeMap[`${studentId}-${tsId}`];
+    return entry?.locked || false;
+  };
+
+  const isAdmin = user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin';
+
   const getGradeId = (studentId, tsId) => {
     const entry = gradeMap[`${studentId}-${tsId}`];
     return entry?.id;
+  };
+
+  const handleToggleLock = async (studentId, tsId) => {
+    const entry = gradeMap[`${studentId}-${tsId}`];
+    if (!entry?.id) return;
+    try {
+      const resp = await gradeService.toggleLock(entry.id);
+      setGradeMap((prev) => {
+        const key = `${studentId}-${tsId}`;
+        const next = { ...prev };
+        if (next[key]) {
+          next[key] = { ...next[key], locked: resp.data.locked };
+        }
+        return next;
+      });
+    } catch (e) {
+      showModal('error', t('grades.error'), e.response?.data?.error || t('grades.toggleLockError'));
+    }
   };
 
   const getMaxScore = (tsId) => maxScore;
@@ -186,7 +229,8 @@ const Grades = () => {
   const handleKeyDown = (e, studentId, tsId, colIdx) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const nextSubj = subjects[colIdx + 1];
+      const subjList = availableSubjects.length > 0 ? availableSubjects : subjects;
+      const nextSubj = subjList[colIdx + 1];
       if (nextSubj) {
         const nextTs = teacherSubjectMap[nextSubj.id];
         const nextTsId = nextTs?.id;
@@ -203,14 +247,15 @@ const Grades = () => {
   };
 
   const studentAverages = React.useMemo(() => {
-    if (!students.length || !subjects.length) return [];
+    const subjList = availableSubjects.length > 0 ? availableSubjects : subjects;
+    if (!students.length || !subjList.length) return [];
     const data = students.map((s) => {
       let totalWeighted = 0;
       let totalCoeff = 0;
       let totalRaw = 0;
       let subjectCount = 0;
 
-      subjects.forEach((subj) => {
+      subjList.forEach((subj) => {
         const ts = teacherSubjectMap[subj.id];
         const score = ts ? getScore(s.id, ts.id) : null;
         if (score != null) {
@@ -232,7 +277,7 @@ const Grades = () => {
       };
     });
 
-    const sorted = [...data].sort((a, b) => (a.avg ?? -1) - (b.avg ?? -1));
+    const sorted = [...data].sort((a, b) => (b.avg ?? -1) - (a.avg ?? -1));
     return data.map((d) => ({
       ...d,
       rank: sorted.indexOf(d) + 1,
@@ -240,10 +285,14 @@ const Grades = () => {
   }, [gradeMap, students, subjects, teacherSubjectMap]);
 
   const handleSave = async () => {
+    const allowedTsIds = user?.profile?.role === 'enseignant'
+      ? new Set(teacherAssignments.map((a) => a.id))
+      : null;
     const toSave = [];
     Object.entries(gradeMap).forEach(([key, data]) => {
       if (data.score == null) return;
       const [sid, tsid] = key.split('-');
+      if (allowedTsIds && !allowedTsIds.has(parseInt(tsid))) return;
       if (data.id) {
         toSave.push({ type: 'update', id: data.id, data: { composition: data.score } });
       } else {
@@ -274,7 +323,7 @@ const Grades = () => {
       gradeList.forEach((g) => {
         const sid = g.student?.id || g.student_id;
         const tsid = g.teacher_subject || g.teacher_subject_id;
-        if (sid && tsid) map[`${sid}-${tsid}`] = { id: g.id, score: g.composition != null ? parseFloat(g.composition) : null };
+        if (sid && tsid) map[`${sid}-${tsid}`] = { id: g.id, score: g.composition != null ? parseFloat(g.composition) : null, locked: g.locked || false };
       });
       setGradeMap(map);
       showModal('success', t('grades.success'), t('grades.saved', { count: toSave.length }));
@@ -283,7 +332,8 @@ const Grades = () => {
   };
 
   const handleExportPDF = () => {
-    if (!students.length || !subjects.length) { showModal('info', t('grades.info'), t('grades.noData')); return; }
+    const subjList = availableSubjects.length > 0 ? availableSubjects : subjects;
+    if (!students.length || !subjList.length) { showModal('info', t('grades.info'), t('grades.noData')); return; }
 
     const doc = new jsPDF('l', 'mm', 'A4');
     const pw = doc.internal.pageSize.getWidth();
@@ -298,15 +348,16 @@ const Grades = () => {
     doc.text(info, pw / 2, 22, { align: 'center' });
     doc.text(`${t('grades.generatedOn')} ${new Date().toLocaleDateString('fr-FR')}`, pw / 2, 28, { align: 'center' });
 
-    const head = [t('grades.num'), t('grades.matricule'), t('grades.lastName'), t('grades.firstName'), ...subjects.map((s) => s.name), t('grades.avg'), t('grades.total'), t('grades.mention')];
+    const head = [t('grades.num'), t('grades.matricule'), t('grades.lastName'), t('grades.firstName'), ...subjList.map((s) => s.name), t('grades.avg'), t('grades.total'), t('grades.mention')];
     const body = studentAverages
       .filter((sa) => !search || `${sa.student.first_name} ${sa.student.last_name}`.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => mentionSortKey(a) - mentionSortKey(b) || (b.avg ?? -1) - (a.avg ?? -1))
       .map((sa, i) => [
         i + 1,
         sa.student.matricule || EMPTY,
         sa.student.last_name || '',
         sa.student.first_name || '',
-        ...subjects.map((subj) => {
+        ...subjList.map((subj) => {
           const ts = teacherSubjectMap[subj.id];
           const score = ts ? getScore(sa.student.id, ts.id) : null;
           return score != null ? score.toString() : '';
@@ -333,17 +384,19 @@ const Grades = () => {
   };
 
   const handleExportExcel = () => {
-    if (!students.length || !subjects.length) { showModal('info', t('grades.info'), t('grades.noData')); return; }
+    const subjList = availableSubjects.length > 0 ? availableSubjects : subjects;
+    if (!students.length || !subjList.length) { showModal('info', t('grades.info'), t('grades.noData')); return; }
 
     let csv = `${t('grades.num')},${t('grades.matricule')},${t('grades.lastName')},${t('grades.firstName')}`;
-    subjects.forEach((s) => { csv += `,${s.name}`; });
+    subjList.forEach((s) => { csv += `,${s.name}`; });
     csv += `,${t('grades.average')},${t('grades.total')},${t('grades.mention')}\n`;
 
     studentAverages
       .filter((sa) => !search || `${sa.student.first_name} ${sa.student.last_name}`.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => mentionSortKey(a) - mentionSortKey(b) || (b.avg ?? -1) - (a.avg ?? -1))
       .forEach((sa, i) => {
         csv += `${i + 1},${sa.student.matricule || ''},"${sa.student.last_name || ''}","${sa.student.first_name || ''}"`;
-        subjects.forEach((subj) => {
+        subjList.forEach((subj) => {
           const ts = teacherSubjectMap[subj.id];
           const score = ts ? getScore(sa.student.id, ts.id) : null;
           csv += `,${score != null ? score : ''}`;
@@ -361,6 +414,7 @@ const Grades = () => {
   };
 
   const handlePrint = () => {
+    const subjList = availableSubjects.length > 0 ? availableSubjects : subjects;
     const printWin = window.open('', '_blank');
     if (!printWin) { showModal('warning', t('grades.popupBlocked'), t('grades.allowPopups')); return; }
 
@@ -371,10 +425,11 @@ const Grades = () => {
     let rows = '';
     studentAverages
       .filter((sa) => !search || `${sa.student.first_name} ${sa.student.last_name}`.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => mentionSortKey(a) - mentionSortKey(b) || (b.avg ?? -1) - (a.avg ?? -1))
       .forEach((sa, i) => {
         rows += '<tr>';
         rows += `<td>${i + 1}</td><td>${sa.student.matricule || EMPTY}</td><td>${sa.student.last_name || ''}</td><td>${sa.student.first_name || ''}</td>`;
-        subjects.forEach((subj) => {
+        subjList.forEach((subj) => {
           const ts = teacherSubjectMap[subj.id];
           const score = ts ? getScore(sa.student.id, ts.id) : null;
           rows += `<td>${score != null ? score : ''}</td>`;
@@ -386,7 +441,7 @@ const Grades = () => {
       });
 
     let subjHeaders = '';
-    subjects.forEach((s) => { subjHeaders += `<th>${s.name}</th>`; });
+    subjList.forEach((s) => { subjHeaders += `<th>${s.name}</th>`; });
 
     printWin.document.write(`
       <html><head><title>${t('grades.printTitle')}</title>
@@ -434,12 +489,14 @@ const Grades = () => {
     finally { setImporting(false); }
   };
 
-  const filtered = studentAverages.filter((sa) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    const s = sa.student;
-    return `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) || (s.matricule || '').toLowerCase().includes(q);
-  });
+  const filtered = studentAverages
+    .filter((sa) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      const s = sa.student;
+      return `${s.first_name} ${s.last_name}`.toLowerCase().includes(q) || (s.matricule || '').toLowerCase().includes(q);
+    })
+    .sort((a, b) => mentionSortKey(a) - mentionSortKey(b) || (b.avg ?? -1) - (a.avg ?? -1));
 
   return (
     <div className="space-y-4 pb-8">
@@ -479,7 +536,7 @@ const Grades = () => {
               <select value={selectedClass} onChange={(e) => { setSelectedClass(e.target.value); loadedDataRef.current = ''; }}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="">{t('grades.select')}</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
+                {availableClasses.map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}
               </select>
             </div>
             <div>
@@ -560,7 +617,7 @@ const Grades = () => {
             </div>
 
             <div className="overflow-auto" ref={tableRef}>
-              <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: subjects.length * 65 + 522 }}>
+              <table className="w-full text-sm border-collapse" style={{ tableLayout: 'fixed', minWidth: Math.max(availableSubjects.length, subjects.length) * 65 + 522 }}>
                 <thead>
                   <tr className="sticky top-0 z-20">
                     <th rowSpan={2} className="sticky left-0 z-30 bg-gradient-to-b from-blue-900 to-blue-800 text-white px-1.5 py-2 text-[10px] font-semibold uppercase tracking-wider border-r border-blue-700 w-8 text-center">
@@ -578,7 +635,7 @@ const Grades = () => {
                     <th rowSpan={2} className="sticky left-[237px] z-30 bg-gradient-to-b from-blue-900 to-blue-800 text-white px-2 py-2 text-[10px] font-semibold uppercase tracking-wider border-r border-blue-700 w-[80px] text-left">
                       {t('grades.firstName')}
                     </th>
-                    {subjects.map((s) => (
+                    {availableSubjects.map((s) => (
                       <th key={s.id} colSpan={1} className="bg-gradient-to-b from-blue-900 to-blue-800 text-white px-1 py-2 text-[9px] font-semibold text-center border-r border-blue-700 w-[65px]">
                         <div className="leading-tight truncate">{s.name}</div>
                         <div className="text-[8px] text-blue-300 font-normal mt-0.5">C{s.coefficient || 1} {maxScoreLabel}</div>
@@ -600,7 +657,7 @@ const Grades = () => {
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={5 + subjects.length + 4} className="text-center py-12 text-gray-400 text-sm">{t('grades.noStudent')}</td></tr>
+                    <tr><td colSpan={5 + availableSubjects.length + 4} className="text-center py-12 text-gray-400 text-sm">{t('grades.noStudent')}</td></tr>
                   ) : filtered.map((sa, idx) => (
                     <tr key={sa.student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/40 transition-colors border-b border-gray-100`}>
                       <td className="sticky left-0 z-10 bg-inherit px-1.5 py-1.5 text-xs text-gray-400 font-mono text-center border-r border-gray-100 w-8">
@@ -624,27 +681,50 @@ const Grades = () => {
                       <td className="sticky left-[237px] z-10 bg-inherit px-2 py-1.5 text-sm text-gray-700 truncate border-r border-gray-100 w-[80px]">
                         {sa.student.first_name || EMPTY}
                       </td>
-                      {subjects.map((s, ci) => {
+                      {availableSubjects.map((s, ci) => {
                         const ts = teacherSubjectMap[s.id];
                         const tsId = ts?.id;
                         const score = tsId ? getScore(sa.student.id, tsId) : null;
+                        const locked = tsId ? isGradeLocked(sa.student.id, tsId) : false;
                         const key = tsId ? `${sa.student.id}-${tsId}` : null;
                         const err = key ? errors[key] : null;
+                        const disabled = locked && !isAdmin;
                         return (
                           <td key={s.id} className="px-0.5 py-0.5 text-center border-r border-gray-100 relative group w-[65px]">
                             {tsId ? (
-                              <input
-                                ref={(el) => { if (key) cellRefs.current[key] = el; }}
-                                type="text"
-                                inputMode="decimal"
-                                defaultValue={score != null ? score.toString() : ''}
-                                onBlur={(e) => handleCellChange(sa.student.id, tsId, e.target.value)}
-                                onKeyDown={(e) => handleKeyDown(e, sa.student.id, tsId, ci)}
-                                className={`w-full px-1 py-1 text-xs text-center rounded border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white focus:shadow-sm hover:bg-blue-50/50 transition-colors ${
-                                  err ? 'ring-2 ring-red-300 bg-red-50' : ''
-                                } ${score != null ? getScoreColor(score, maxScore) : 'text-gray-300'}`}
-                                placeholder="-"
-                              />
+                              <div className="relative">
+                                <input
+                                  ref={(el) => { if (key) cellRefs.current[key] = el; }}
+                                  type="text"
+                                  inputMode="decimal"
+                                  defaultValue={score != null ? score.toString() : ''}
+                                  onBlur={(e) => { if (!disabled) handleCellChange(sa.student.id, tsId, e.target.value); }}
+                                  onKeyDown={(e) => { if (!disabled) handleKeyDown(e, sa.student.id, tsId, ci); }}
+                                  disabled={disabled}
+                                  className={`w-full px-1 py-1 text-xs text-center rounded border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white focus:shadow-sm hover:bg-blue-50/50 transition-colors ${
+                                    err ? 'ring-2 ring-red-300 bg-red-50' : ''
+                                  } ${score != null ? getScoreColor(score, maxScore) : 'text-gray-300'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  placeholder="-"
+                                />
+                                {locked && (
+                                  <button
+                                    onClick={() => handleToggleLock(sa.student.id, tsId)}
+                                    className={`absolute -top-1 -right-1 p-0.5 rounded-full ${isAdmin ? 'opacity-0 group-hover:opacity-100' : ''} ${isAdmin ? 'hover:bg-yellow-100' : ''} transition-opacity`}
+                                    title={locked ? t('grades.locked') : t('grades.unlocked')}
+                                  >
+                                    <Lock className={`w-3 h-3 ${isAdmin ? 'text-yellow-500' : 'text-gray-300'}`} />
+                                  </button>
+                                )}
+                                {isAdmin && !locked && (
+                                  <button
+                                    onClick={() => handleToggleLock(sa.student.id, tsId)}
+                                    className="absolute -top-1 -right-1 p-0.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-green-100 transition-opacity"
+                                    title={t('grades.clickToLock')}
+                                  >
+                                    <Unlock className="w-3 h-3 text-green-500" />
+                                  </button>
+                                )}
+                              </div>
                             ) : (
                               <div className="flex items-center justify-center h-full text-gray-200 cursor-not-allowed" title={t('grades.noTeacher')}>
                                 <Ban className="w-3.5 h-3.5" />

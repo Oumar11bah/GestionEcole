@@ -170,6 +170,7 @@ export const gradeService = {
     responseType: 'blob'
   }),
   initialize: (data) => api.post('/grades/grades/initialize/', data),
+  toggleLock: (id) => api.post(`/grades/grades/${id}/toggle_lock/`),
   importExcel: (data) => api.post('/grades/grades/import_excel/', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),

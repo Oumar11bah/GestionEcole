@@ -30,9 +30,9 @@ class GradeSerializer(serializers.ModelSerializer):
         fields = ['id', 'student', 'student_id', 'teacher_subject', 'teacher_subject_name', 'teacher_subject_id',
                   'term', 'term_id', 'homework1', 'homework2', 'composition',
                   'max_score', 'cycle_max_score', 'average', 'appreciation',
-                  'date_recorded', 'comment',
+                  'date_recorded', 'comment', 'locked',
                   'created_at', 'updated_at']
-        read_only_fields = ['max_score', 'average', 'appreciation', 'cycle_max_score']
+        read_only_fields = ['max_score', 'average', 'appreciation', 'cycle_max_score', 'locked']
 
     def get_teacher_subject_name(self, obj):
         return obj.teacher_subject.subject.name

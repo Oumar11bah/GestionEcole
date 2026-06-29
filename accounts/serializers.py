@@ -33,12 +33,27 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return role_obj.permissions
 
 
+class TeacherProfileMinSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    subject_assignments = serializers.SerializerMethodField()
+
+    def get_subject_assignments(self, obj):
+        from subjects.serializers import TeacherSubjectSerializer
+        qs = obj.subject_assignments.all()
+        return TeacherSubjectSerializer(qs, many=True).data
+
 class UserDetailSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
+    teacher_profile = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login', 'profile']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login', 'profile', 'teacher_profile']
+
+    def get_teacher_profile(self, obj):
+        if hasattr(obj, 'teacher_profile') and obj.teacher_profile:
+            return TeacherProfileMinSerializer(obj.teacher_profile).data
+        return None
 
 
 class UserCreateSerializer(serializers.Serializer):
@@ -175,6 +190,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed("Nom d'utilisateur ou mot de passe incorrect")
         data['user'] = UserSerializer(self.user).data
         data['profile'] = UserProfileSerializer(self.user.profile).data
+        if hasattr(self.user, 'teacher_profile') and self.user.teacher_profile:
+            data['teacher_profile'] = TeacherProfileMinSerializer(self.user.teacher_profile).data
         return data
 
 

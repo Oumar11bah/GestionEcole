@@ -22,6 +22,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
 from openpyxl import load_workbook
 
@@ -72,18 +73,29 @@ class GradeViewSet(viewsets.ModelViewSet):
     serializer_class = GradeSerializer
     permission_classes = [IsAuthenticated, CanManageGrades]
 
+    def _is_admin(self, user):
+        return user.is_staff or user.profile.role in ['super_admin', 'admin']
+
     def perform_create(self, serializer):
         grade = serializer.save()
+        if not self._is_admin(self.request.user):
+            grade.locked = True
+            grade.save(update_fields=['locked'])
         self._log_changes(grade, created=True)
 
     def perform_update(self, serializer):
         old_instance = self.get_object()
+        if old_instance.locked and not self._is_admin(self.request.user):
+            raise PermissionDenied("Cette note est verrouillée. Seul un administrateur peut la modifier.")
         old_values = {
             'homework1': old_instance.homework1,
             'homework2': old_instance.homework2,
             'composition': old_instance.composition,
         }
         grade = serializer.save()
+        if not self._is_admin(self.request.user):
+            grade.locked = True
+            grade.save(update_fields=['locked'])
         for field, old_val in old_values.items():
             new_val = getattr(grade, field)
             if old_val != new_val:
@@ -391,6 +403,15 @@ class GradeViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = GradeHistorySerializer(queryset, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def toggle_lock(self, request, pk=None):
+        grade = self.get_object()
+        if not self._is_admin(request.user):
+            return Response({'error': 'Seul un administrateur peut verrouiller/déverrouiller une note.'}, status=status.HTTP_403_FORBIDDEN)
+        grade.locked = not grade.locked
+        grade.save(update_fields=['locked'])
+        return Response({'locked': grade.locked, 'id': grade.id})
 
 
 class GradeHistoryViewSet(viewsets.ReadOnlyModelViewSet):

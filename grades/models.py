@@ -27,6 +27,7 @@ class Grade(models.Model):
     homework2 = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Devoir 2')
     composition = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Composition')
     max_score = models.DecimalField(max_digits=5, decimal_places=2, default=20)
+    locked = models.BooleanField(default=False)
     date_recorded = models.DateField(auto_now_add=True)
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
