@@ -271,7 +271,7 @@ const Reports = () => {
       doc.setTextColor(0, 0, 0);
 
       const statusRows = Object.entries(data?.byStatus || {}).map(([status, count]) => [
-        status.charAt(0).toUpperCase() + status.slice(1),
+        t(`reports.${status}`),
         String(count),
       ]);
       autoTable(doc, {
@@ -605,7 +605,7 @@ const PaymentsReport = ({ data, rawData }) => {
       <div className="space-y-2">
         {Object.entries(byStatus).map(([status, count]) => (
           <div key={status} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <span className="text-gray-700 capitalize">{status}</span>
+            <span className="text-gray-700 capitalize">{t(`reports.${status}`)}</span>
             <span className="font-bold text-blue-600">{count}</span>
           </div>
         ))}

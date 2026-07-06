@@ -111,6 +111,7 @@ const Classes = () => {
               <option value="primaire">{t('classes.filterPrimaire')}</option>
               <option value="college">{t('classes.filterCollege')}</option>
               <option value="lycee">{t('classes.filterLycee')}</option>
+              <option value="prescolaire">{t('classes.filterPrescolaire')}</option>
             </select>
           </div>
         </div>
@@ -152,9 +153,10 @@ const Classes = () => {
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         cycleName === 'primaire' ? 'bg-green-100 text-green-700' :
                         cycleName === 'college' ? 'bg-blue-100 text-blue-700' :
+                        cycleName === 'prescolaire' ? 'bg-orange-100 text-orange-700' :
                         'bg-purple-100 text-purple-700'
                       }`}>
-                        {cycleName === 'primaire' ? t('classes.cyclePrimaire') : cycleName === 'college' ? t('classes.cycleCollege') : t('classes.cycleLycee')}
+                        {cycleName === 'primaire' ? t('classes.cyclePrimaire') : cycleName === 'college' ? t('classes.cycleCollege') : cycleName === 'prescolaire' ? t('classes.cyclePrescolaire') : t('classes.cycleLycee')}
                       </span>
                     </td>
                 <td className="px-6 py-4 text-gray-600">

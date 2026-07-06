@@ -12,7 +12,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                   'class_assigned', 'class_name',
                   'academic_year', 'is_re_registration', 'previous_class', 'status',
                   'registration_fees', 'payment_status', 'notes', 'validated_by',
-                  'created_at', 'updated_at']
+                  'tenant', 'created_at', 'updated_at']
 
     def get_student_name(self, obj):
         return f"{obj.student.first_name} {obj.student.last_name}" if obj.student else ''

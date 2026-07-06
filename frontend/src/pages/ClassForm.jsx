@@ -10,7 +10,8 @@ import { getDefaultAcademicYear, fetchAcademicYears } from '../utils/preferences
 const CYCLE_CLASSES = {
   primaire: ['1ère Année', '2eme Année', '3eme Année', '4eme Année', '5eme Année', '6eme Année'],
   college: ['7eme Année', '8eme Année', '9eme Année', '10eme Année'],
-  lycee: ['11eme Année', '12eme Année', 'Terminale']
+  lycee: ['11eme Année', '12eme Année', 'Terminale'],
+  prescolaire: ['Petit section', 'Grand section']
 };
 
 const ClassForm = () => {
@@ -158,6 +159,7 @@ const ClassForm = () => {
               <option value="primaire">{t('classForm.cyclePrimaire')}</option>
               <option value="college">{t('classForm.cycleCollege')}</option>
               <option value="lycee">{t('classForm.cycleLycee')}</option>
+              <option value="prescolaire">{t('classForm.cyclePrescolaire')}</option>
             </select>
           </div>
 

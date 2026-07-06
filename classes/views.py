@@ -2,28 +2,45 @@ import datetime as dt
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 from .models import Cycle, Class, ScheduleEntry
 from .serializers import CycleSerializer, ClassSerializer, ScheduleEntrySerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from accounts.permissions import CanManageClasses
+from accounts.utils import TenantAwareMixin, get_user_role, get_request_tenant
 
-class CycleViewSet(viewsets.ModelViewSet):
+class CycleViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Cycle.objects.all()
     serializer_class = CycleSerializer
-    permission_classes = [IsAuthenticated, CanManageClasses]
 
-class ClassViewSet(viewsets.ModelViewSet):
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), CanManageClasses()]
+
+    def get_queryset(self):
+        role = get_user_role(self.request.user)
+        if role == 'super_admin':
+            return Cycle.objects.none()
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            return Cycle.objects.filter(
+                models.Q(tenant=tenant) | models.Q(tenant__isnull=True)
+            ).order_by('name')
+        return Cycle.objects.filter(tenant__isnull=True).order_by('name')
+
+class ClassViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Class.objects.select_related('cycle').all()
     serializer_class = ClassSerializer
     permission_classes = [IsAuthenticated, CanManageClasses]
     pagination_class = None  # Disable pagination for classes
 
     def get_queryset(self):
-        queryset = Class.objects.select_related('cycle').all()
-        cycle = self.request.query_params.get('cycle', None)
-        if cycle:
-            queryset = queryset.filter(cycle__name=cycle)
+        queryset = super().get_queryset()
+        if hasattr(self, 'request'):
+            cycle = self.request.query_params.get('cycle', None)
+            if cycle:
+                queryset = queryset.filter(cycle__name=cycle)
         return queryset
     
     def create(self, request, *args, **kwargs):
@@ -44,20 +61,21 @@ class ClassViewSet(viewsets.ModelViewSet):
                 status=400
             )
 
-class ScheduleEntryViewSet(viewsets.ModelViewSet):
+class ScheduleEntryViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = ScheduleEntry.objects.all()
     serializer_class = ScheduleEntrySerializer
     permission_classes = [IsAuthenticated, CanManageClasses]
 
     def get_queryset(self):
-        queryset = ScheduleEntry.objects.all()
-        class_id = self.request.query_params.get('class_id', None)
-        if class_id:
-            queryset = queryset.filter(class_assigned_id=class_id)
+        queryset = super().get_queryset()
+        if hasattr(self, 'request'):
+            class_id = self.request.query_params.get('class_id', None)
+            if class_id:
+                queryset = queryset.filter(class_assigned_id=class_id)
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save()
+        super().perform_create(serializer)
 
     def perform_update(self, serializer):
         serializer.save()

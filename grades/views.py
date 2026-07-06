@@ -29,6 +29,8 @@ from openpyxl import load_workbook
 from .models import Term, Grade, GradeHistory, StudentAverage
 from .serializers import TermSerializer, GradeSerializer, GradeHistorySerializer, StudentAverageSerializer
 from accounts.permissions import CanManageGrades
+from accounts.utils import TenantAwareMixin
+from accounts.utils import get_user_role
 
 from students.models import Student
 from subjects.models import TeacherSubject
@@ -63,18 +65,18 @@ def get_appreciation(avg):
         return 'Passable'
     return 'Insuffisant'
 
-class TermViewSet(viewsets.ModelViewSet):
+class TermViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Term.objects.all()
     serializer_class = TermSerializer
     permission_classes = [IsAuthenticated]
 
-class GradeViewSet(viewsets.ModelViewSet):
+class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Grade.objects.all()
     serializer_class = GradeSerializer
     permission_classes = [IsAuthenticated, CanManageGrades]
 
     def _is_admin(self, user):
-        return user.is_staff or user.profile.role in ['super_admin', 'admin']
+        return user.is_staff or get_user_role(user) in ['super_admin', 'admin']
 
     def perform_create(self, serializer):
         grade = serializer.save()
@@ -96,6 +98,7 @@ class GradeViewSet(viewsets.ModelViewSet):
         if not self._is_admin(self.request.user):
             grade.locked = True
             grade.save(update_fields=['locked'])
+        tenant = self._get_tenant()
         for field, old_val in old_values.items():
             new_val = getattr(grade, field)
             if old_val != new_val:
@@ -105,20 +108,24 @@ class GradeViewSet(viewsets.ModelViewSet):
                     field_name=field,
                     old_value=str(old_val) if old_val is not None else None,
                     new_value=str(new_val) if new_val is not None else None,
+                    tenant=tenant,
                 )
 
     def perform_destroy(self, instance):
+        tenant = self._get_tenant()
         GradeHistory.objects.create(
             grade=instance,
             user=self.request.user,
             field_name='deleted',
             old_value=str(instance),
             new_value=None,
+            tenant=tenant,
         )
         instance.delete()
 
     def _log_changes(self, grade, created=False):
         if created:
+            tenant = self._get_tenant()
             for field in ['homework1', 'homework2', 'composition']:
                 val = getattr(grade, field)
                 if val is not None:
@@ -128,26 +135,29 @@ class GradeViewSet(viewsets.ModelViewSet):
                         field_name=field,
                         old_value=None,
                         new_value=str(val),
+                        tenant=tenant,
                     )
 
     def get_queryset(self):
-        queryset = Grade.objects.select_related('student', 'teacher_subject', 'term')
-        student_id = self.request.query_params.get('student_id', None)
-        class_id = self.request.query_params.get('class_id', None)
-        subject_id = self.request.query_params.get('subject_id', None)
-        term_id = self.request.query_params.get('term_id', None)
-        teacher_id = self.request.query_params.get('teacher_id', None)
+        queryset = super().get_queryset()
+        queryset = queryset.select_related('student', 'teacher_subject', 'term')
+        if hasattr(self, 'request'):
+            student_id = self.request.query_params.get('student_id', None)
+            class_id = self.request.query_params.get('class_id', None)
+            subject_id = self.request.query_params.get('subject_id', None)
+            term_id = self.request.query_params.get('term_id', None)
+            teacher_id = self.request.query_params.get('teacher_id', None)
 
-        if student_id:
-            queryset = queryset.filter(student_id=student_id)
-        if class_id:
-            queryset = queryset.filter(student__class_assigned_id=class_id)
-        if subject_id:
-            queryset = queryset.filter(teacher_subject__subject_id=subject_id)
-        if term_id:
-            queryset = queryset.filter(term_id=term_id)
-        if teacher_id:
-            queryset = queryset.filter(teacher_subject__teacher_id=teacher_id)
+            if student_id:
+                queryset = queryset.filter(student_id=student_id)
+            if class_id:
+                queryset = queryset.filter(student__class_assigned_id=class_id)
+            if subject_id:
+                queryset = queryset.filter(teacher_subject__subject_id=subject_id)
+            if term_id:
+                queryset = queryset.filter(term_id=term_id)
+            if teacher_id:
+                queryset = queryset.filter(teacher_subject__teacher_id=teacher_id)
         return queryset
 
     @action(detail=False, methods=['post'])
@@ -190,20 +200,25 @@ class GradeViewSet(viewsets.ModelViewSet):
                 return Response({
                     'error': 'Aucun enseignant trouvé dans le système. Créez d\'abord un enseignant.'
                 }, status=status.HTTP_400_BAD_REQUEST)
+            tenant = self._get_tenant()
             teacher_subject, _ = TeacherSubject.objects.get_or_create(
                 teacher=teacher,
                 subject=subject,
                 class_assigned_id=class_id,
-                defaults={'academic_year': term.academic_year}
+                defaults={
+                    'academic_year': term.academic_year,
+                    'tenant': tenant,
+                }
             )
 
+        tenant = self._get_tenant()
         created = 0
         for student in students:
             _, was_created = Grade.objects.get_or_create(
                 student=student,
                 teacher_subject=teacher_subject,
                 term=term,
-                defaults={'homework1': None, 'homework2': None, 'composition': None}
+                defaults={'homework1': None, 'homework2': None, 'composition': None, 'tenant': tenant}
             )
             if was_created:
                 created += 1
@@ -436,19 +451,20 @@ class GradeHistoryViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class StudentAverageViewSet(viewsets.ModelViewSet):
+class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = StudentAverage.objects.all()
     serializer_class = StudentAverageSerializer
     permission_classes = [IsAuthenticated, CanManageGrades]
 
     def get_queryset(self):
-        queryset = StudentAverage.objects.all()
-        term_id = self.request.query_params.get('term_id', None)
-        if term_id:
-            queryset = queryset.filter(term_id=term_id).order_by('rank')
-        class_id = self.request.query_params.get('class_assigned', None)
-        if class_id:
-            queryset = queryset.filter(student__class_assigned_id=class_id)
+        queryset = super().get_queryset()
+        if hasattr(self, 'request'):
+            term_id = self.request.query_params.get('term_id', None)
+            if term_id:
+                queryset = queryset.filter(term_id=term_id).order_by('rank')
+            class_id = self.request.query_params.get('class_assigned', None)
+            if class_id:
+                queryset = queryset.filter(student__class_assigned_id=class_id)
         return queryset
 
     def _build_bulletin_elements(self, student, term, styles, doc):

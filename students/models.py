@@ -1,6 +1,8 @@
 from django.db import models
+from django.db.models import UniqueConstraint
 from django.contrib.auth.models import User
 from classes.models import Class
+from tenants.models import Tenant
 from datetime import datetime
 
 class Parent(models.Model):
@@ -14,6 +16,7 @@ class Parent(models.Model):
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
     profession = models.CharField(max_length=100, blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -31,7 +34,7 @@ class Student(models.Model):
         ('expelled', 'Radié'),
     ]
 
-    matricule = models.CharField(max_length=50, unique=True, blank=True)
+    matricule = models.CharField(max_length=50, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
@@ -47,6 +50,7 @@ class Student(models.Model):
     commune = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True, default='Guinée')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -64,7 +68,10 @@ class Student(models.Model):
         base = self.first_name[-2:].upper() + str(dob.year)[-2:] + self.last_name[-1:].upper()
         while True:
             matricule = base + str(random.randint(10, 99))
-            if not Student.objects.filter(matricule=matricule).exists():
+            qs = Student.objects.filter(matricule=matricule)
+            if self.tenant:
+                qs = qs.filter(tenant=self.tenant)
+            if not qs.exists():
                 return matricule
 
     def save(self, *args, **kwargs):
@@ -83,3 +90,6 @@ class Student(models.Model):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    class Meta:
+        unique_together = ('matricule', 'tenant')

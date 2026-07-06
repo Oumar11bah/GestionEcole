@@ -163,7 +163,7 @@ const SubjectForm = () => {
                     className="rounded text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm">
-                    {cycle.name === 'primaire' ? t('subjectForm.primaire') : cycle.name === 'college' ? t('subjectForm.college') : t('subjectForm.lycee')}
+                    {cycle.name === 'primaire' ? t('subjectForm.primaire') : cycle.name === 'college' ? t('subjectForm.college') : cycle.name === 'prescolaire' ? t('subjectForm.prescolaire') : t('subjectForm.lycee')}
                   </span>
                 </label>
               ))}

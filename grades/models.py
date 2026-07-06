@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import User
 from students.models import Student
 from subjects.models import Subject, TeacherSubject
+from tenants.models import Tenant
 from django.db.models import Sum, Count, F
 
 class Term(models.Model):
@@ -12,6 +13,7 @@ class Term(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} - {self.academic_year}"
@@ -30,6 +32,7 @@ class Grade(models.Model):
     locked = models.BooleanField(default=False)
     date_recorded = models.DateField(auto_now_add=True)
     comment = models.TextField(blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -97,6 +100,7 @@ class StudentAverage(models.Model):
     term = models.ForeignKey(Term, on_delete=models.CASCADE, related_name='student_averages')
     average = models.DecimalField(max_digits=5, decimal_places=2)
     rank = models.IntegerField(null=True, blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     calculated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -132,6 +136,7 @@ class GradeHistory(models.Model):
     field_name = models.CharField(max_length=50)
     old_value = models.CharField(max_length=50, null=True, blank=True)
     new_value = models.CharField(max_length=50, null=True, blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

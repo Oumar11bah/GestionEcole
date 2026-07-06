@@ -8,6 +8,8 @@ from .serializers import ClassResultSerializer
 from grades.models import StudentAverage, Grade
 from students.models import Student
 from accounts.permissions import CanManageGrades, CanExportData
+from accounts.utils import get_user_role
+
 
 class ClassResultViewSet(viewsets.ModelViewSet):
     queryset = ClassResult.objects.all()
@@ -16,6 +18,8 @@ class ClassResultViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageGrades]
 
     def get_queryset(self):
+        if get_user_role(self.request.user) == 'super_admin':
+            return ClassResult.objects.none()
         qs = ClassResult.objects.all()
         class_id = self.request.query_params.get('class_assigned')
         term_id = self.request.query_params.get('term')

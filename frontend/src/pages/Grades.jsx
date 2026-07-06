@@ -87,7 +87,7 @@ const Grades = () => {
   const loadedDataRef = useRef('');
 
   const cycleName = classObj?.cycle?.name?.toLowerCase() || '';
-  const maxScore = cycleName === 'primaire' ? 10 : 20;
+  const maxScore = (cycleName === 'primaire' || cycleName === 'prescolaire') ? 10 : 20;
   const maxScoreLabel = `/${maxScore}`;
 
   useEffect(() => {

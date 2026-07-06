@@ -4,7 +4,8 @@ from .models import AcademicYear, SchoolInfo, Semester
 class AcademicYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicYear
-        fields = ['id', 'name', 'is_active', 'created_at']
+        fields = ['id', 'name', 'is_active', 'archived', 'created_at', 'tenant']
+        read_only_fields = ['tenant']
 
 class SemesterSerializer(serializers.ModelSerializer):
     academic_year_name = serializers.CharField(source='academic_year.name', read_only=True)
@@ -21,7 +22,8 @@ class SchoolInfoSerializer(serializers.ModelSerializer):
         model = SchoolInfo
         fields = ['id', 'name', 'acronym', 'address', 'phone', 'email', 'website', 'logo', 'logo_url',
                   'director_signature', 'signature_url', 'director_name',
-                  'academic_year', 'primary_color', 'secondary_color', 'city', 'country', 'created_at']
+                  'academic_year', 'primary_color', 'secondary_color', 'city', 'country', 'created_at', 'tenant']
+        read_only_fields = ['tenant']
 
     def get_logo_url(self, obj):
         if obj.logo:

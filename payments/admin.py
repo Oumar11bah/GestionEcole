@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import FeeType, Payment, PaymentHistory
 
-# Register your models here.
+admin.site.register(FeeType)
+admin.site.register(Payment)
+admin.site.register(PaymentHistory)

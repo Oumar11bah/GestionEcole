@@ -20,8 +20,8 @@ from .serializers import (
 )
 from .models import UserProfile, ActivityLog, LoginAttempt, LoginLockout, Role, DEFAULT_ROLE_PERMISSIONS
 from .permissions import IsSuperAdmin, IsAdminOrSuperAdmin, CanManageUsers, CanViewActivity, CanManageSchool
-import string
-import secrets
+from tenants.models import Tenant
+from .utils import get_user_role, get_request_tenant
 import json
 
 
@@ -240,7 +240,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 log_activity(user, 'login', 'Authentification',
                            f"Connexion réussie ({device})", request)
                 from .notifications import notify_admins
-                role_display = user.profile.get_role_display() if hasattr(user, 'profile') else ''
+                role_display = Role.get_or_default(user.profile.role).display_name if hasattr(user, 'profile') else ''
                 notify_admins('login',
                     f"{user.get_full_name() or user.username} ({role_display}) s'est connecté",
                     f"Connexion de {user.get_full_name() or user.username} ({role_display})")
@@ -359,6 +359,15 @@ class UserViewSet(viewsets.ModelViewSet):
         search = self.request.query_params.get('search', None)
         is_active = self.request.query_params.get('is_active', None)
 
+        # Non-super admin users only see users from their own tenant
+        user_role = get_user_role(self.request.user)
+        if user_role != 'super_admin':
+            tenant = get_request_tenant(self.request)
+            if tenant:
+                queryset = queryset.filter(profile__tenant=tenant)
+            else:
+                return User.objects.none()
+
         if role:
             queryset = queryset.filter(profile__role=role)
         if search:
@@ -386,6 +395,23 @@ class UserViewSet(viewsets.ModelViewSet):
             else:
                 password = generate_password()
 
+        # Determine tenant for the new user
+        creator_role = get_user_role(request.user)
+        tenant_id = request.data.get('tenant_id', None)
+        target_tenant = None
+
+        if creator_role == 'super_admin':
+            if tenant_id:
+                from tenants.models import Tenant
+                try:
+                    target_tenant = Tenant.objects.get(id=tenant_id)
+                except Tenant.DoesNotExist:
+                    return Response({'error': 'Établissement introuvable'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            creator_profile = getattr(request.user, 'profile', None)
+            if creator_profile and creator_profile.tenant:
+                target_tenant = creator_profile.tenant
+
         try:
             user = User.objects.create_user(
                 username=serializer.validated_data['username'],
@@ -406,13 +432,15 @@ class UserViewSet(viewsets.ModelViewSet):
             profile.date_of_hire = serializer.validated_data.get('date_of_hire', None)
             profile.is_active = user.is_active
             profile.created_by = request.user
+            if target_tenant:
+                profile.tenant = target_tenant
 
             if 'profile_picture' in request.FILES:
                 profile.profile_picture = request.FILES['profile_picture']
             profile.save()
 
             log_activity(request.user, 'create', 'Utilisateurs',
-                       f"A créé l'utilisateur {user.get_full_name() or user.username} ({profile.get_role_display()})",
+                       f"A créé l'utilisateur {user.get_full_name() or user.username} ({Role.get_or_default(profile.role).display_name})",
                        request)
 
             return Response({
@@ -459,6 +487,12 @@ class UserViewSet(viewsets.ModelViewSet):
             profile.language = serializer.validated_data['language']
         if 'preferred_academic_year' in serializer.validated_data:
             profile.preferred_academic_year = serializer.validated_data['preferred_academic_year']
+        if 'primary_color' in serializer.validated_data:
+            profile.primary_color = serializer.validated_data['primary_color']
+        if 'secondary_color' in serializer.validated_data:
+            profile.secondary_color = serializer.validated_data['secondary_color']
+        if 'theme' in serializer.validated_data:
+            profile.theme = serializer.validated_data['theme']
         profile.is_active = user.is_active
         profile.save()
 
@@ -474,8 +508,6 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         if user == request.user:
             return Response({'error': 'Vous ne pouvez pas supprimer votre propre compte'}, status=status.HTTP_400_BAD_REQUEST)
-        if user.is_superuser:
-            return Response({'error': 'Impossible de supprimer un super administrateur'}, status=status.HTTP_400_BAD_REQUEST)
 
         name = user.get_full_name() or user.username
         user.delete()
@@ -533,6 +565,12 @@ class UserViewSet(viewsets.ModelViewSet):
             profile.language = serializer.validated_data['language']
         if 'preferred_academic_year' in serializer.validated_data:
             profile.preferred_academic_year = serializer.validated_data['preferred_academic_year']
+        if 'primary_color' in serializer.validated_data:
+            profile.primary_color = serializer.validated_data['primary_color']
+        if 'secondary_color' in serializer.validated_data:
+            profile.secondary_color = serializer.validated_data['secondary_color']
+        if 'theme' in serializer.validated_data:
+            profile.theme = serializer.validated_data['theme']
         if 'profile_picture' in request.FILES:
             profile.profile_picture = request.FILES['profile_picture']
         profile.save()
@@ -567,7 +605,7 @@ class UserViewSet(viewsets.ModelViewSet):
         log_activity(request.user, 'logout', 'Authentification',
                    f"Déconnexion depuis {get_client_ip(request)}", request)
         from .notifications import notify_admins
-        role_display = request.user.profile.get_role_display() if hasattr(request.user, 'profile') else ''
+        role_display = Role.get_or_default(request.user.profile.role).display_name if hasattr(request.user, 'profile') else ''
         notify_admins('logout',
             f"{request.user.get_full_name() or request.user.username} ({role_display}) s'est déconnecté",
             f"Déconnexion de {request.user.get_full_name() or request.user.username} ({role_display})")
@@ -575,9 +613,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def roles(self, request):
+        user_role = get_user_role(request.user)
+        if user_role == 'super_admin':
+            profiles_qs = UserProfile.objects.all()
+        else:
+            tenant = get_request_tenant(request)
+            profiles_qs = UserProfile.objects.filter(tenant=tenant) if tenant else UserProfile.objects.none()
         assigned_roles = set()
-        for role_key, _ in UserProfile.ROLE_CHOICES:
-            if UserProfile.objects.filter(role=role_key).exists():
+        for role_key, role_label in UserProfile.ROLE_CHOICES:
+            if profiles_qs.filter(role=role_key).exists():
                 assigned_roles.add(role_key)
         roles_data = []
         for role_key, role_label in UserProfile.ROLE_CHOICES:
@@ -586,17 +630,22 @@ class UserViewSet(viewsets.ModelViewSet):
                     'role': role_key,
                     'label': role_label,
                 })
-        serializer = RoleSerializer(data=roles_data, many=True)
-        serializer.is_valid()
-        return Response(serializer.data)
+        return Response(roles_data)
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        total = User.objects.count()
-        active = User.objects.filter(is_active=True).count()
+        role = get_user_role(request.user)
+        if role == 'super_admin':
+            tenant = None
+            profiles_qs = UserProfile.objects.all()
+        else:
+            tenant = get_request_tenant(request)
+            profiles_qs = UserProfile.objects.filter(tenant=tenant) if tenant else UserProfile.objects.none()
+        total = profiles_qs.count()
+        active = profiles_qs.filter(is_active=True).count()
         by_role = {}
         for role_key, role_label in UserProfile.ROLE_CHOICES:
-            count = UserProfile.objects.filter(role=role_key).count()
+            count = profiles_qs.filter(role=role_key).count()
             by_role[role_key] = {'label': role_label, 'count': count}
         return Response({
             'total': total,
@@ -609,6 +658,13 @@ class UserViewSet(viewsets.ModelViewSet):
     def online(self, request):
         cutoff = timezone.now() - timedelta(minutes=5)
         profiles = UserProfile.objects.filter(last_activity__gte=cutoff, is_active=True).select_related('user')
+        user_role = get_user_role(request.user)
+        if user_role != 'super_admin':
+            tenant = get_request_tenant(request)
+            if tenant:
+                profiles = profiles.filter(tenant=tenant)
+            else:
+                profiles = profiles.none()
         data = []
         for p in profiles:
             data.append({
@@ -616,7 +672,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 'username': p.user.username,
                 'full_name': p.user.get_full_name() or p.user.username,
                 'role': p.role,
-                'role_display': p.get_role_display(),
+                'role_display': Role.get_or_default(p.role).display_name,
                 'last_activity': p.last_activity,
             })
         return Response(data)
@@ -649,25 +705,56 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
+    def get_queryset(self):
+        user = self.request.user
+        role = get_user_role(user)
+        if role == 'super_admin':
+            return UserProfile.objects.all()
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            return UserProfile.objects.filter(tenant=tenant)
+        return UserProfile.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        role = get_user_role(user)
+        if role == 'super_admin':
+            tenant = None
+        else:
+            tenant = get_request_tenant(self.request)
+        serializer.save(created_by=user, tenant=tenant)
+
 
 class ActivityLogViewSet(viewsets.ModelViewSet):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated]
 
+    def _get_tenant_filter(self, user):
+        role = get_user_role(user)
+        if role == 'super_admin':
+            return {'pk__in': []}  # no results
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            return {'user__profile__tenant': tenant}
+        return {'pk__in': []}
+
     def perform_destroy(self, instance):
         user = self.request.user
-        if user.profile.role not in ['super_admin', 'admin', 'directeur']:
+        if get_user_role(user) not in ['admin', 'directeur']:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les administrateurs peuvent supprimer des activités")
         instance.delete()
 
     def get_queryset(self):
         user = self.request.user
-        if user.profile.role in ['super_admin', 'admin', 'directeur']:
-            queryset = ActivityLog.objects.all().select_related('user')
+        tenant_filter = self._get_tenant_filter(user)
+        if get_user_role(user) in ['admin', 'directeur']:
+            queryset = ActivityLog.objects.filter(**tenant_filter).select_related('user')
+        elif get_user_role(user) == 'super_admin':
+            return ActivityLog.objects.none()
         else:
-            queryset = ActivityLog.objects.filter(user=user).select_related('user')
+            queryset = ActivityLog.objects.filter(user=user, **tenant_filter).select_related('user')
         action = self.request.query_params.get('action')
         module = self.request.query_params.get('module')
         user_id = self.request.query_params.get('user_id')
@@ -691,12 +778,13 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['delete', 'post'])
     def clear_all(self, request):
         user = request.user
-        if user.profile.role not in ['super_admin', 'admin', 'directeur']:
+        if get_user_role(user) not in ['admin', 'directeur']:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les administrateurs peuvent vider les journaux")
-        ActivityLog.objects.all().delete()
+        tenant_filter = self._get_tenant_filter(user)
+        ActivityLog.objects.filter(**tenant_filter).delete()
         from dashboard.models import ActivityLog as DashboardActivityLog
-        DashboardActivityLog.objects.all().delete()
+        DashboardActivityLog.objects.filter(**tenant_filter).delete()
         return Response({'status': 'Journaux supprimés avec succès'})
 
     @action(detail=False, methods=['post'])
@@ -704,12 +792,18 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
         ids = request.data.get('ids', [])
         if not ids:
             return Response({'error': 'Aucun ID fourni'}, status=status.HTTP_400_BAD_REQUEST)
-        count = ActivityLog.objects.filter(id__in=ids).delete()[0]
+        tenant_filter = self._get_tenant_filter(self.request.user)
+        qs = ActivityLog.objects.filter(id__in=ids)
+        if tenant_filter:
+            qs = qs.filter(**tenant_filter)
+        count = qs.delete()[0]
         return Response({'status': f'{count} activité(s) supprimée(s)'})
 
     @action(detail=False, methods=['get'])
     def modules(self, request):
-        modules = (ActivityLog.objects.values_list('module', flat=True)
+        tenant_filter = self._get_tenant_filter(self.request.user)
+        modules = (ActivityLog.objects.filter(**tenant_filter)
+                  .values_list('module', flat=True)
                   .distinct().order_by('module'))
         return Response(list(modules))
 
@@ -720,7 +814,15 @@ class LoginAttemptViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
     def get_queryset(self):
-        queryset = LoginAttempt.objects.all()
+        user = self.request.user
+        role = get_user_role(user)
+        if role == 'super_admin':
+            return LoginAttempt.objects.none()
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            queryset = LoginAttempt.objects.filter(user__profile__tenant=tenant)
+        else:
+            return LoginAttempt.objects.none()
         days = self.request.query_params.get('days')
         successful = self.request.query_params.get('successful')
         if days:
@@ -742,10 +844,22 @@ class RoleViewSet(viewsets.ModelViewSet):
     lookup_field = 'name'
 
     def get_queryset(self):
-        return Role.objects.all().order_by('name')
+        user = self.request.user
+        role = get_user_role(user)
+        if role == 'super_admin':
+            return Role.objects.all().order_by('name')
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            return Role.objects.filter(
+                models.Q(tenant=tenant) | models.Q(tenant__isnull=True)
+            ).order_by('name')
+        return Role.objects.filter(tenant__isnull=True).order_by('name')
 
     def perform_create(self, serializer):
-        role = serializer.save()
+        user = self.request.user
+        role = get_user_role(user)
+        tenant = None if role == 'super_admin' else get_request_tenant(self.request)
+        role = serializer.save(tenant=tenant)
         log_activity(self.request.user, 'create', 'Permissions',
                    f"A créé le rôle {role.display_name}", self.request)
 

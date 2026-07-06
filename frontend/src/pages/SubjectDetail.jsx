@@ -31,11 +31,12 @@ const SubjectDetail = () => {
     </div>
   );
 
-  const cycleLabels = { primaire: t('subjectDetail.cyclePrimaire'), college: t('subjectDetail.cycleCollege'), lycee: t('subjectDetail.cycleLycee') };
+  const cycleLabels = { primaire: t('subjectDetail.cyclePrimaire'), college: t('subjectDetail.cycleCollege'), lycee: t('subjectDetail.cycleLycee'), prescolaire: t('subjectDetail.cyclePrescolaire') };
   const cycleColors = {
     primaire: 'bg-green-50 text-green-700 border-green-200',
     college: 'bg-blue-50 text-blue-700 border-blue-200',
     lycee: 'bg-purple-50 text-purple-700 border-purple-200',
+    prescolaire: 'bg-orange-50 text-orange-700 border-orange-200',
   };
 
   const typeLabels = { obligatoire: t('subjectDetail.typeMandatory'), optionnelle: t('subjectDetail.typeOptional') };

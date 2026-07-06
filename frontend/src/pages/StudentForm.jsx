@@ -250,7 +250,7 @@ const StudentForm = () => {
               <Label>{t('studentForm.cycleLabel')}</Label>
               <select value={selectedCycle} onChange={(e) => handleCycleChange(e.target.value)} className="w-full border rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 <option value="">{t('studentForm.selectDefault')}</option>
-                {cycles.map((c) => <option key={c.id} value={c.name}>{c.name === 'primaire' ? t('studentForm.cyclePrimaire') : c.name === 'college' ? t('studentForm.cycleCollege') : t('studentForm.cycleLycee')}</option>)}
+                {cycles.map((c) => <option key={c.id} value={c.name}>{c.name === 'primaire' ? t('studentForm.cyclePrimaire') : c.name === 'college' ? t('studentForm.cycleCollege') : c.name === 'prescolaire' ? t('studentForm.cyclePrescolaire') : t('studentForm.cycleLycee')}</option>)}
               </select>
             </div>
 

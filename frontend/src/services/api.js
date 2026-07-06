@@ -121,6 +121,10 @@ export const studentService = {
     params,
     responseType: 'blob'
   }),
+  getCardsPdf: (params) => api.get('/students/students/cards_pdf/', {
+    params,
+    responseType: 'blob'
+  }),
 };
 
 export const classService = {
@@ -211,6 +215,8 @@ export const paymentService = {
   createFeeType: (data) => api.post('/payments/fee-types/', data),
   updateFeeType: (id, data) => api.patch(`/payments/fee-types/${id}/`, data),
   deleteFeeType: (id) => api.delete(`/payments/fee-types/${id}/`),
+  addPayment: (id, data) => api.post(`/payments/payments/${id}/add_payment/`, data),
+  getPaymentHistory: (params) => api.get('/payments/payment-history/', { params }),
   initiateMobilePayment: (data) => api.post('/mobile/providers/initiate_payment/', data),
 };
 
@@ -273,6 +279,7 @@ export const academicYearService = {
   create: (data) => api.post('/school/academic-years/', data),
   update: (id, data) => api.put(`/school/academic-years/${id}/`, data),
   delete: (id) => api.delete(`/school/academic-years/${id}/`),
+  unarchive: (id) => api.post(`/school/academic-years/${id}/unarchive/`),
 };
 
 export const schoolService = {
@@ -334,6 +341,19 @@ export const roleService = {
   delete: (name) => api.delete(`/accounts/roles/${name}/`),
   getModules: () => api.get('/accounts/roles/modules/'),
   resetDefaults: (name) => api.post(`/accounts/roles/${name}/reset_defaults/`),
+};
+
+export const tenantService = {
+  getAll: () => api.get('/tenants/tenants/'),
+  getById: (id) => api.get(`/tenants/tenants/${id}/`),
+  create: (data) => api.post('/tenants/tenants/', data),
+  update: (id, data) => api.patch(`/tenants/tenants/${id}/`, data),
+  delete: (id) => api.delete(`/tenants/tenants/${id}/`),
+  register: (data) => api.post('/tenants/tenants/register/', data),
+  toggleActivation: (id) => api.post(`/tenants/tenants/${id}/toggle_activation/`),
+  approve: (id) => api.post(`/tenants/tenants/${id}/approve/`),
+  checkLicense: (id) => api.get(`/tenants/tenants/${id}/check_license/`),
+  checkSubdomain: (name) => api.get('/tenants/tenants/check_subdomain/', { params: { name } }),
 };
 
 export default api;

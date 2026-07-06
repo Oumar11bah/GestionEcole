@@ -17,7 +17,7 @@ class TeacherSubjectInfoSerializer(serializers.ModelSerializer):
 class SalaryHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryHistory
-        fields = ['id', 'teacher', 'amount', 'month', 'paid_date', 'is_paid', 'notes', 'created_at']
+        fields = ['id', 'teacher', 'amount', 'month', 'paid_date', 'is_paid', 'notes', 'tenant', 'created_at']
 
 class TeacherSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
@@ -30,7 +30,7 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'matricule', 'first_name', 'last_name', 'full_name', 'gender', 'date_of_birth',
                   'phone_number', 'email', 'address', 'photo',
                   'specialty', 'diploma', 'years_of_experience', 'hire_date', 'contract_type',
-                  'salary', 'is_active',
+                  'salary', 'is_active', 'tenant',
                   'teacher_subjects', 'salary_history',
                   'created_at', 'updated_at']
 

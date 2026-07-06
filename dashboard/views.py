@@ -7,28 +7,52 @@ from django.db.models.functions import TruncMonth
 from .models import Statistic, ActivityLog
 from .serializers import StatisticSerializer, ActivityLogSerializer
 from accounts.permissions import CanViewActivity, IsAdminOrSuperAdmin, RoleBasedPermission
+from accounts.utils import get_user_role
 from students.models import Student
 from payments.models import Payment
 from classes.models import Cycle, Class
 from teachers.models import Teacher
 from grades.models import Grade, StudentAverage
+from tenants.models import Tenant
+from tenants.serializers import TenantSerializer
 from datetime import datetime, timedelta
+
 
 class StatisticViewSet(viewsets.ModelViewSet):
     queryset = Statistic.objects.all()
     serializer_class = StatisticSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
+    def get_queryset(self):
+        if get_user_role(self.request.user) == 'super_admin':
+            return Statistic.objects.none()
+        return super().get_queryset()
+
+
 class ActivityLogViewSet(viewsets.ModelViewSet):
     queryset = ActivityLog.objects.all()
     serializer_class = ActivityLogSerializer
     permission_classes = [IsAuthenticated, IsAdminOrSuperAdmin]
 
+    def get_queryset(self):
+        if get_user_role(self.request.user) == 'super_admin':
+            return ActivityLog.objects.none()
+        return super().get_queryset()
+
     @action(detail=False, methods=['post'])
     def clear_all(self, request):
-        count = ActivityLog.objects.count()
-        ActivityLog.objects.all().delete()
+        user = request.user
+        role = get_user_role(user)
+        if role == 'super_admin':
+            return Response({'deleted': 0})
+        if hasattr(user, 'profile') and user.profile.tenant:
+            logs = ActivityLog.objects.filter(user__profile__tenant=user.profile.tenant)
+        else:
+            logs = ActivityLog.objects.none()
+        count = logs.count()
+        logs.delete()
         return Response({'deleted': count})
+
 
 class DashboardViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated, RoleBasedPermission]
@@ -36,22 +60,50 @@ class DashboardViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        total_students = Student.objects.count()
-        total_teachers = Teacher.objects.filter(is_active=True).count()
-        total_payments = Payment.objects.filter(status='completed').aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
-        total_classes = Class.objects.count()
+        role = get_user_role(request.user)
+
+        # Super admin sees tenant-level stats (no school data)
+        if role == 'super_admin':
+            tenants = Tenant.objects.all()
+            total = tenants.count()
+            active = tenants.filter(is_active=True, is_pending=False).count()
+            pending = tenants.filter(is_pending=True).count()
+            inactive = tenants.filter(is_active=False, is_pending=False).count()
+            recent_tenants = TenantSerializer(tenants.order_by('-created_at')[:5], many=True).data
+
+            data = {
+                'is_super_admin': True,
+                'total_tenants': total,
+                'active_tenants': active,
+                'pending_tenants': pending,
+                'inactive_tenants': inactive,
+                'recent_tenants': recent_tenants,
+            }
+            return Response(data)
+
+        # Filter by tenant for non-super-admin users
+        tenant_filter = {}
+        if hasattr(request.user, 'profile') and request.user.profile.tenant:
+            tenant_filter = {'tenant': request.user.profile.tenant}
+
+        total_students = Student.objects.filter(**tenant_filter).count()
+        total_teachers = Teacher.objects.filter(is_active=True, **tenant_filter).count()
+        total_payments = Payment.objects.filter(status='completed', **tenant_filter).aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+        total_classes = Class.objects.filter(**tenant_filter).count()
 
         students_by_cycle = {}
-        for cycle in Cycle.objects.all():
+        for cycle in Cycle.objects.filter(**tenant_filter):
             students_by_cycle[cycle.name] = Student.objects.filter(
-                class_assigned__cycle=cycle
+                class_assigned__cycle=cycle, **tenant_filter
             ).count()
 
-        user = request.user
-        if user.profile.role in ['super_admin', 'admin', 'directeur']:
-            recent_activities_qs = ActivityLog.objects.all()
+        if role in ['admin', 'directeur']:
+            if hasattr(request.user, 'profile') and request.user.profile.tenant:
+                recent_activities_qs = ActivityLog.objects.filter(user__profile__tenant=request.user.profile.tenant)
+            else:
+                recent_activities_qs = ActivityLog.objects.none()
         else:
-            recent_activities_qs = ActivityLog.objects.filter(user=user)
+            recent_activities_qs = ActivityLog.objects.filter(user=request.user)
         recent_activities = ActivityLogSerializer(
             recent_activities_qs.order_by('-timestamp')[:10], many=True
         ).data
@@ -62,15 +114,18 @@ class DashboardViewSet(viewsets.ViewSet):
             month_num = i + 1
             primary_count = Student.objects.filter(
                 class_assigned__cycle__name='primaire',
-                enrollment_date__month__lte=month_num
+                enrollment_date__month__lte=month_num,
+                **tenant_filter
             ).count()
             college_count = Student.objects.filter(
                 class_assigned__cycle__name='college',
-                enrollment_date__month__lte=month_num
+                enrollment_date__month__lte=month_num,
+                **tenant_filter
             ).count()
             lycee_count = Student.objects.filter(
                 class_assigned__cycle__name='lycee',
-                enrollment_date__month__lte=month_num
+                enrollment_date__month__lte=month_num,
+                **tenant_filter
             ).count()
             enrollment_trend.append({
                 'mois': month_name,
@@ -81,7 +136,7 @@ class DashboardViewSet(viewsets.ViewSet):
 
         cycle_distribution = []
         total = total_students or 1
-        for cycle in Cycle.objects.all():
+        for cycle in Cycle.objects.filter(**tenant_filter):
             count = students_by_cycle.get(cycle.name, 0)
             cycle_distribution.append({
                 'name': cycle.get_name_display(),
@@ -90,9 +145,10 @@ class DashboardViewSet(viewsets.ViewSet):
             })
 
         success_rate = 0
-        if StudentAverage.objects.exists():
-            passing = StudentAverage.objects.filter(average__gte=10).count()
-            success_rate = round((passing / StudentAverage.objects.count()) * 100)
+        averages_qs = StudentAverage.objects.filter(**tenant_filter)
+        if averages_qs.exists():
+            passing = averages_qs.filter(average__gte=10).count()
+            success_rate = round((passing / averages_qs.count()) * 100)
 
         data = {
             'total_students': total_students,

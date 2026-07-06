@@ -5,7 +5,7 @@ import { Users, GraduationCap, TrendingUp, Award } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { dashboardService, userService } from '../services/api';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Building, CheckCircle, Clock, XCircle, ArrowRight, Globe } from 'lucide-react';
 import MessageModal from '../components/MessageModal';
 import toast from '../utils/toast';
 
@@ -65,6 +65,102 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (stats.is_super_admin) {
+    return (
+      <div>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg px-6 py-6 mb-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold">Tableau de bord superviseur</h1>
+              <p className="text-blue-100 text-sm mt-0.5">Vue d'ensemble de tous les établissements</p>
+            </div>
+            <Globe className="w-10 h-10 text-blue-300" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow p-6 border-l-4 border-l-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total établissements</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total_tenants}</p>
+              </div>
+              <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Building className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 border-l-4 border-l-emerald-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Actifs</p>
+                <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active_tenants}</p>
+              </div>
+              <div className="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 border-l-4 border-l-amber-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">En attente</p>
+                <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending_tenants}</p>
+              </div>
+              <div className="w-12 h-12 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6 border-l-4 border-l-red-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Désactivés</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{stats.inactive_tenants}</p>
+              </div>
+              <div className="w-12 h-12 rounded-lg bg-red-50 flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {stats.recent_tenants && stats.recent_tenants.length > 0 && (
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Derniers établissements inscrits</h3>
+              <Link to="/tenants" className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1">
+                <span>Voir tout</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {stats.recent_tenants.map((tenant) => (
+                <div key={tenant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Building className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{tenant.name}</p>
+                      <p className="text-xs text-gray-500">{tenant.subdomain}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                    tenant.is_pending ? 'bg-amber-100 text-amber-700' :
+                    tenant.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {tenant.is_pending ? 'En attente' : tenant.is_active ? 'Actif' : 'Désactivé'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -134,7 +230,7 @@ const Dashboard = () => {
               <thead>
                 <tr className="text-left text-sm text-gray-500 border-b">
                   <th className="pb-3 font-medium">{t('dashboard.activity')}</th>
-                  {(user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
+                  {(user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
                     <th className="pb-3 font-medium">{t('dashboard.user')}</th>
                   )}
                   <th className="pb-3 font-medium">{t('dashboard.description')}</th>
@@ -153,7 +249,7 @@ const Dashboard = () => {
                         {act.action === 'create' ? t('dashboard.actionCreate') : act.action === 'update' ? t('dashboard.actionUpdate') : act.action === 'delete' ? t('dashboard.actionDelete') : act.action}
                       </span>
                     </td>
-                    {(user?.profile?.role === 'super_admin' || user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
+                    {(user?.profile?.role === 'admin' || user?.profile?.role === 'directeur') && (
                       <td className="py-3 text-gray-600">{act.user}</td>
                     )}
                     <td className="py-3 text-gray-600">{MODEL_LABELS[act.model_name] || act.model_name} - {act.object_repr}</td>

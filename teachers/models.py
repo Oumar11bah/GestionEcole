@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from tenants.models import Tenant
 from datetime import datetime
 
 class Teacher(models.Model):
@@ -14,7 +15,7 @@ class Teacher(models.Model):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher_profile', null=True, blank=True)
-    matricule = models.CharField(max_length=50, unique=True, blank=True)
+    matricule = models.CharField(max_length=50, blank=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
@@ -30,6 +31,7 @@ class Teacher(models.Model):
     contract_type = models.CharField(max_length=20, choices=CONTRACT_CHOICES, default='full_time')
     salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,7 +49,10 @@ class Teacher(models.Model):
         base = self.first_name[-2:].upper() + str(dob.year)[-2:] + self.last_name[-1:].upper()
         while True:
             matricule = base + str(random.randint(10, 99))
-            if not Teacher.objects.filter(matricule=matricule).exists():
+            qs = Teacher.objects.filter(matricule=matricule)
+            if self.tenant:
+                qs = qs.filter(tenant=self.tenant)
+            if not qs.exists():
                 return matricule
 
     def save(self, *args, **kwargs):
@@ -67,6 +72,9 @@ class Teacher(models.Model):
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
 
+    class Meta:
+        unique_together = ('matricule', 'tenant')
+
 
 class SalaryHistory(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='salary_history')
@@ -75,6 +83,7 @@ class SalaryHistory(models.Model):
     paid_date = models.DateField(null=True, blank=True)
     is_paid = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

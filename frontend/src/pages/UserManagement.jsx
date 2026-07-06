@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Label from '../components/Label';
 import { useTranslation } from 'react-i18next';
 import { Search, UserPlus, Eye, EyeOff, Pencil, Trash2, Key, Shield, ShieldOff, X, Check, AlertTriangle } from 'lucide-react';
-import { userService, roleService, authService } from '../services/api';
+import { userService, roleService, authService, tenantService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from '../utils/toast';
 
@@ -32,6 +32,7 @@ const initialFormState = {
   date_of_hire: '',
   is_active: true,
   password: '',
+  tenant_id: '',
 };
 
 const UserManagement = () => {
@@ -57,6 +58,8 @@ const UserManagement = () => {
   const canManage = canAccess('users');
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [rolesList, setRolesList] = useState([]);
+  const [tenantsList, setTenantsList] = useState([]);
+  const isSuperAdmin = currentUser?.profile?.role === 'super_admin';
 
   const roleMap = {};
   rolesList.forEach((r, i) => {
@@ -71,6 +74,7 @@ const UserManagement = () => {
     fetchStats();
     fetchOnlineUsers();
     fetchRoles();
+    if (isSuperAdmin) fetchTenants();
     const interval = setInterval(fetchOnlineUsers, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -104,6 +108,13 @@ const UserManagement = () => {
     try {
       const res = await roleService.getAll();
       setRolesList(res.data.results || res.data || []);
+    } catch (e) {}
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const res = await tenantService.getAll();
+      setTenantsList(res.data.results || res.data || []);
     } catch (e) {}
   };
 
@@ -145,7 +156,7 @@ const UserManagement = () => {
 
   const openCreate = () => {
     setEditUser(null);
-    setForm({ ...initialFormState, role: rolesList[0]?.name || '' });
+    setForm({ ...initialFormState, role: rolesList[0]?.name || '', tenant_id: tenantsList[0]?.id || '' });
     setGeneratedPassword(null);
     setShowModal(true);
   };
@@ -274,7 +285,7 @@ const UserManagement = () => {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('users.roles')}</p>
-            <p className="text-2xl font-bold text-blue-600 mt-1">{Object.keys(stats.by_role).length}</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{rolesList.length}</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('users.online')}</p>
@@ -451,6 +462,15 @@ const UserManagement = () => {
                     {rolesList.map((r) => <option key={r.name} value={r.name}>{r.display_name}</option>)}
                   </select>
                 </div>
+                {isSuperAdmin && !editUser && (
+                  <div>
+                    <Label required>Établissement</Label>
+                    <select value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} required className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Sélectionner un établissement</option>
+                      {tenantsList.map((t) => <option key={t.id} value={t.id}>{t.name || t.subdomain}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <Label>{t('users.phone')}</Label>
                   <input value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder={t('users.phonePlaceholder')} />

@@ -6,7 +6,7 @@ from subjects.models import TeacherSubject
 class TermSerializer(serializers.ModelSerializer):
     class Meta:
         model = Term
-        fields = ['id', 'name', 'academic_year', 'start_date', 'end_date', 'is_active']
+        fields = ['id', 'name', 'academic_year', 'start_date', 'end_date', 'is_active', 'tenant']
 
 class StudentBasicSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,7 +30,7 @@ class GradeSerializer(serializers.ModelSerializer):
         fields = ['id', 'student', 'student_id', 'teacher_subject', 'teacher_subject_name', 'teacher_subject_id',
                   'term', 'term_id', 'homework1', 'homework2', 'composition',
                   'max_score', 'cycle_max_score', 'average', 'appreciation',
-                  'date_recorded', 'comment', 'locked',
+                  'date_recorded', 'comment', 'locked', 'tenant',
                   'created_at', 'updated_at']
         read_only_fields = ['max_score', 'average', 'appreciation', 'cycle_max_score', 'locked']
 
@@ -85,7 +85,7 @@ class GradeHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GradeHistory
-        fields = ['id', 'grade', 'grade_detail', 'user', 'user_name', 'field_name', 'old_value', 'new_value', 'created_at']
+        fields = ['id', 'grade', 'grade_detail', 'user', 'user_name', 'field_name', 'old_value', 'new_value', 'tenant', 'created_at']
         read_only_fields = fields
 
     def get_grade_detail(self, obj):
@@ -102,7 +102,7 @@ class StudentAverageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentAverage
-        fields = ['id', 'student', 'student_id', 'term', 'term_id', 'average', 'rank', 'calculated_at']
+        fields = ['id', 'student', 'student_id', 'term', 'term_id', 'average', 'rank', 'tenant', 'calculated_at']
 
     def create(self, validated_data):
         validated_data['student'] = Student.objects.get(id=validated_data.pop('student_id'))

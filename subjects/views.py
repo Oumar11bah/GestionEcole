@@ -6,8 +6,9 @@ from .models import Subject, TeacherSubject
 from .serializers import SubjectSerializer, TeacherSubjectSerializer
 from classes.models import Class
 from accounts.permissions import CanManageClasses
+from accounts.utils import TenantAwareMixin
 
-class SubjectViewSet(viewsets.ModelViewSet):
+class SubjectViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Subject.objects.prefetch_related('cycle').all()
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated, CanManageClasses]
@@ -22,7 +23,11 @@ class SubjectViewSet(viewsets.ModelViewSet):
         except Class.DoesNotExist:
             return Response({'error': 'Classe introuvable'}, status=404)
 
-        subjects = Subject.objects.filter(cycle=cls.cycle)
+        qs = Subject.objects.all()
+        tenant = self._get_tenant()
+        if tenant:
+            qs = qs.filter(tenant=tenant)
+        subjects = qs.filter(cycle=cls.cycle)
 
         if cls.cycle.name == 'lycee' and cls.specialty and cls.specialty != 'none':
             subjects = subjects.filter(specialty__in=[cls.specialty, 'none'])
@@ -31,17 +36,19 @@ class SubjectViewSet(viewsets.ModelViewSet):
         serializer = SubjectSerializer(subjects, many=True, context={'request': request})
         return Response(serializer.data)
 
-class TeacherSubjectViewSet(viewsets.ModelViewSet):
+class TeacherSubjectViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = TeacherSubject.objects.all()
     serializer_class = TeacherSubjectSerializer
     permission_classes = [IsAuthenticated, CanManageClasses]
 
     def get_queryset(self):
-        queryset = TeacherSubject.objects.select_related('teacher', 'subject', 'class_assigned').all()
-        teacher_id = self.request.query_params.get('teacher_id', None)
-        class_id = self.request.query_params.get('class_id', None)
-        if teacher_id:
-            queryset = queryset.filter(teacher_id=teacher_id)
-        if class_id:
-            queryset = queryset.filter(class_assigned_id=class_id)
+        queryset = super().get_queryset()
+        queryset = queryset.select_related('teacher', 'subject', 'class_assigned')
+        if hasattr(self, 'request'):
+            teacher_id = self.request.query_params.get('teacher_id', None)
+            class_id = self.request.query_params.get('class_id', None)
+            if teacher_id:
+                queryset = queryset.filter(teacher_id=teacher_id)
+            if class_id:
+                queryset = queryset.filter(class_assigned_id=class_id)
         return queryset

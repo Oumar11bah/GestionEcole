@@ -2,37 +2,44 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import { communicationService, userService } from '../services/api';
+import { authService, communicationService, userService } from '../services/api';
 import AccessDeniedModal from './AccessDeniedModal';
 import MessageModal from './MessageModal';
 import {
   LayoutDashboard, Users, Building, GraduationCap, BookOpen,
   ClipboardList, CalendarClock, CreditCard, BarChart3,
   Settings, LogOut, Bell, Search, ChevronDown, UserPlus, DoorOpen, FileText, Menu, X, User, Shield, Clock,
-  Sun, Moon
+  Sun, Moon, Globe
 } from 'lucide-react';
 
 const logoUrl = new URL('../assets/LOG.png', import.meta.url).href;
 
+const isItemVisible = (item, role) => {
+  if (role === 'super_admin') return !item.schoolOnly;
+  return !item.superOnly;
+};
+
 const menuItems = [
   { icon: LayoutDashboard, label: 'nav.dashboard', path: '/dashboard', module: 'dashboard' },
-  { icon: Users, label: 'nav.students', path: '/students', module: 'students' },
-  { icon: UserPlus, label: 'nav.registrations', path: '/registrations', module: 'registrations' },
-  { icon: Building, label: 'nav.classes', path: '/classes', module: 'classes' },
-  { icon: GraduationCap, label: 'nav.teachers', path: '/teachers', module: 'teachers' },
-  { icon: BookOpen, label: 'nav.subjects', path: '/subjects', module: 'subjects' },
-  { icon: DoorOpen, label: 'nav.rooms', path: '/rooms', module: 'rooms' },
-  { icon: ClipboardList, label: 'nav.grades', path: '/grades', module: 'grades' },
-  { icon: CalendarClock, label: 'nav.attendance', path: '/attendance', module: 'attendance' },
-  { icon: CalendarClock, label: 'nav.timetable', path: '/timetable', module: 'timetable' },
-  { icon: CreditCard, label: 'nav.payments', path: '/payments', module: 'payments' },
-  { icon: BarChart3, label: 'nav.results', path: '/results', module: 'results' },
-  { icon: FileText, label: 'nav.bulletins', path: '/bulletins', module: 'bulletins' },
-  { icon: BarChart3, label: 'nav.reports', path: '/reports', module: 'reports' },
-  { icon: Clock, label: 'nav.activity', path: '/activity', module: 'users' },
-  { icon: Settings, label: 'nav.settings', path: '/settings', module: 'settings' },
-  { icon: Users, label: 'nav.users', path: '/users', module: 'users' },
-  { icon: Shield, label: 'nav.permissions', path: '/roles', module: 'users' },
+  { icon: Users, label: 'nav.students', path: '/students', module: 'students', schoolOnly: true },
+  { icon: UserPlus, label: 'nav.registrations', path: '/registrations', module: 'registrations', schoolOnly: true },
+  { icon: Building, label: 'nav.classes', path: '/classes', module: 'classes', schoolOnly: true },
+  { icon: GraduationCap, label: 'nav.teachers', path: '/teachers', module: 'teachers', schoolOnly: true },
+  { icon: BookOpen, label: 'nav.subjects', path: '/subjects', module: 'subjects', schoolOnly: true },
+  { icon: DoorOpen, label: 'nav.rooms', path: '/rooms', module: 'rooms', schoolOnly: true },
+  { icon: ClipboardList, label: 'nav.grades', path: '/grades', module: 'grades', schoolOnly: true },
+  { icon: CalendarClock, label: 'nav.attendance', path: '/attendance', module: 'attendance', schoolOnly: true },
+  { icon: CalendarClock, label: 'nav.timetable', path: '/timetable', module: 'timetable', schoolOnly: true },
+  { icon: CreditCard, label: 'nav.payments', path: '/payments', module: 'payments', schoolOnly: true },
+  { icon: BarChart3, label: 'nav.results', path: '/results', module: 'results', schoolOnly: true },
+  { icon: FileText, label: 'nav.bulletins', path: '/bulletins', module: 'bulletins', schoolOnly: true },
+  { icon: BarChart3, label: 'nav.reports', path: '/reports', module: 'reports', schoolOnly: true },
+  { icon: Clock, label: 'nav.activity', path: '/activity', module: 'users', schoolOnly: true },
+  { icon: Settings, label: 'nav.settings', path: '/settings', module: 'settings', schoolOnly: true },
+  { icon: Users, label: 'nav.users', path: '/users', module: 'users', schoolOnly: true },
+  { icon: Shield, label: 'nav.permissions', path: '/roles', module: 'users', schoolOnly: true },
+  { icon: Globe, label: 'Clients', path: '/tenants', module: 'users', superOnly: true },
+  { icon: Shield, label: 'Licences', path: '/licences', module: 'users', superOnly: true },
 ];
 
 const Sidebar = ({ open, onClose }) => {
@@ -86,7 +93,7 @@ const Sidebar = ({ open, onClose }) => {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
-          {menuItems.map((item) => {
+          {menuItems.filter(item => isItemVisible(item, user?.profile?.role)).map((item) => {
             const isActive = location.pathname === item.path;
             const hasAccess = canAccess(item.module);
             return (
@@ -172,7 +179,7 @@ const Sidebar = ({ open, onClose }) => {
 
 const Navbar = ({ onMenuToggle }) => {
   const { t } = useTranslation();
-  const { user, logout, canAccess } = useAuth();
+  const { user, logout, canAccess, updateUser } = useAuth();
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
@@ -181,13 +188,20 @@ const Navbar = ({ onMenuToggle }) => {
   const [notifList, setNotifList] = useState([]);
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('theme');
+    return stored ? stored === 'dark' : user?.profile?.theme === 'dark';
+  });
   const notifRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    setDarkMode(user?.profile?.theme === 'dark');
+  }, [user?.profile?.theme]);
   const searchRef = useRef(null);
 
   useEffect(() => {
@@ -228,38 +242,39 @@ const Navbar = ({ onMenuToggle }) => {
 
   const allFeatures = [
     ...menuItems,
-    { label: 'search.financialReport', path: '/reports?type=payments', module: 'reports' },
-    { label: 'search.studentStats', path: '/reports?type=students', module: 'reports' },
-    { label: 'search.absenceReport', path: '/reports?type=attendance', module: 'reports' },
-    { label: 'search.academicResults', path: '/reports?type=grades', module: 'reports' },
-    { label: 'search.activityHistory', path: '/reports?type=activity', module: 'reports' },
-    { label: 'search.printList', path: '/students', module: 'students' },
-    { label: 'search.printCard', path: '/students', module: 'students' },
-    { label: 'search.addStudent', path: '/students/new', module: 'students' },
-    { label: 'search.newRegistration', path: '/registrations?action=new', module: 'registrations' },
-    { label: 'search.renewRegistration', path: '/registrations?action=renew', module: 'registrations' },
-    { label: 'search.addClass', path: '/classes/new', module: 'classes' },
-    { label: 'search.addTeacher', path: '/teachers/new', module: 'teachers' },
-    { label: 'search.addSubject', path: '/subjects/new', module: 'subjects' },
-    { label: 'search.addRoom', path: '/rooms?action=add', module: 'rooms' },
-    { label: 'search.addUser', path: '/users', module: 'users' },
-    { label: 'nav.timetable', path: '/timetable', module: 'timetable' },
-    { label: 'search.addLesson', path: '/timetable?action=add', module: 'timetable' },
-    { label: 'search.markAttendance', path: '/attendance?action=mark', module: 'attendance' },
-    { label: 'search.recordPayment', path: '/payments?action=new', module: 'payments' },
-    { label: 'search.printReceipt', path: '/payments', module: 'payments' },
-    { label: 'nav.bulletins', path: '/bulletins', module: 'bulletins' },
-    { label: 'search.downloadAll', path: '/bulletins', module: 'bulletins' },
-    { label: 'search.exportPdf', path: '/reports', module: 'reports' },
-    { label: 'search.importGrades', path: '/grades?action=import', module: 'grades' },
-    { label: 'search.exportExcel', path: '/grades', module: 'grades' },
-    { label: 'search.changePassword', path: '/settings?tab=password', module: 'settings' },
-    { label: 'settings.school', path: '/settings?tab=school', module: 'settings' },
-    { label: 'settings.alerts', path: '/settings?tab=alerts', module: 'settings' },
-    { label: 'settings.preferences', path: '/settings?tab=preferences', module: 'settings' },
-    { label: 'search.academicYear', path: '/settings?tab=school', module: 'settings' },
-    { label: 'search.averages', path: '/averages', module: 'grades' },
-    { label: 'nav.permissions', path: '/roles', module: 'users' },
+    { label: 'search.financialReport', path: '/reports?type=payments', module: 'reports', schoolOnly: true },
+    { label: 'search.studentStats', path: '/reports?type=students', module: 'reports', schoolOnly: true },
+    { label: 'search.absenceReport', path: '/reports?type=attendance', module: 'reports', schoolOnly: true },
+    { label: 'search.academicResults', path: '/reports?type=grades', module: 'reports', schoolOnly: true },
+    { label: 'search.activityHistory', path: '/reports?type=activity', module: 'reports', schoolOnly: true },
+    { label: 'search.printList', path: '/students', module: 'students', schoolOnly: true },
+    { label: 'search.printCard', path: '/students', module: 'students', schoolOnly: true },
+    { label: 'search.addStudent', path: '/students/new', module: 'students', schoolOnly: true },
+    { label: 'search.newRegistration', path: '/registrations?action=new', module: 'registrations', schoolOnly: true },
+    { label: 'search.renewRegistration', path: '/registrations?action=renew', module: 'registrations', schoolOnly: true },
+    { label: 'search.addClass', path: '/classes/new', module: 'classes', schoolOnly: true },
+    { label: 'search.addTeacher', path: '/teachers/new', module: 'teachers', schoolOnly: true },
+    { label: 'search.addSubject', path: '/subjects/new', module: 'subjects', schoolOnly: true },
+    { label: 'search.addRoom', path: '/rooms?action=add', module: 'rooms', schoolOnly: true },
+    { label: 'search.addUser', path: '/users', module: 'users', schoolOnly: true },
+    { label: 'nav.timetable', path: '/timetable', module: 'timetable', schoolOnly: true },
+    { label: 'search.addLesson', path: '/timetable?action=add', module: 'timetable', schoolOnly: true },
+    { label: 'search.markAttendance', path: '/attendance?action=mark', module: 'attendance', schoolOnly: true },
+    { label: 'search.recordPayment', path: '/payments?action=new', module: 'payments', schoolOnly: true },
+    { label: 'search.printReceipt', path: '/payments', module: 'payments', schoolOnly: true },
+    { label: 'nav.bulletins', path: '/bulletins', module: 'bulletins', schoolOnly: true },
+    { label: 'search.downloadAll', path: '/bulletins', module: 'bulletins', schoolOnly: true },
+    { label: 'search.exportPdf', path: '/reports', module: 'reports', schoolOnly: true },
+    { label: 'search.importGrades', path: '/grades?action=import', module: 'grades', schoolOnly: true },
+    { label: 'search.exportExcel', path: '/grades', module: 'grades', schoolOnly: true },
+    { label: 'search.changePassword', path: '/settings?tab=password', module: 'settings', schoolOnly: true },
+    { label: 'settings.school', path: '/settings?tab=school', module: 'settings', schoolOnly: true },
+    { label: 'settings.alerts', path: '/settings?tab=alerts', module: 'settings', schoolOnly: true },
+    { label: 'settings.preferences', path: '/settings?tab=preferences', module: 'settings', schoolOnly: true },
+    { label: 'search.academicYear', path: '/settings?tab=school', module: 'settings', schoolOnly: true },
+    { label: 'search.averages', path: '/averages', module: 'grades', schoolOnly: true },
+    { label: 'nav.permissions', path: '/roles', module: 'users', schoolOnly: true },
+    { label: 'Licences', path: '/licences', module: 'users', superOnly: true },
   ];
 
   const searchResults = searchQuery.trim()
@@ -268,6 +283,7 @@ const Navbar = ({ onMenuToggle }) => {
           t(item.label).toLowerCase().includes(searchQuery.toLowerCase()) &&
           self.findIndex((x) => x.label === item.label) === i
         )
+        .filter((item) => isItemVisible(item, user?.profile?.role))
         .filter((item) => item.module ? canAccess(item.module) : true)
         .slice(0, 8)
     : [];
@@ -352,7 +368,19 @@ const Navbar = ({ onMenuToggle }) => {
       </div>
 
       <div className="flex items-center space-x-2 lg:space-x-4">
-        <button onClick={() => setDarkMode(!darkMode)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <button onClick={async () => {
+          const newMode = !darkMode;
+          setDarkMode(newMode);
+          if (user?.id) {
+            try {
+              const res = await authService.updateProfile(user.id, { theme: newMode ? 'dark' : 'light' });
+              if (res.data?.profile) {
+                const updated = { ...user, profile: res.data.profile };
+                updateUser(updated);
+              }
+            } catch {}
+          }
+        }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
           {darkMode ? <Sun className="w-5 h-5 text-gray-600" /> : <Moon className="w-5 h-5 text-gray-600" />}
         </button>
 

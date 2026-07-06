@@ -1,6 +1,7 @@
 from django.db import models
 from students.models import Student
 from classes.models import Class
+from tenants.models import Tenant
 
 class Registration(models.Model):
     STATUS_CHOICES = [
@@ -26,6 +27,7 @@ class Registration(models.Model):
     previous_class = models.ForeignKey(Class, on_delete=models.SET_NULL, null=True, blank=True, related_name='previous_registrations')
     notes = models.TextField(blank=True)
     validated_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -165,6 +165,37 @@ const Students = () => {
     }
   };
 
+  const handlePrintCards = async () => {
+    try {
+      const params = {};
+      if (filterCycle !== '') params.cycle = filterCycle;
+      if (filterClass !== '') {
+        const found = classes.find((c) => c.name === filterClass);
+        if (found) params.class_id = found.id;
+      }
+      if (filterStatus !== '') {
+        const statusMap = { 'Actif': 'active', 'Suspendu': 'suspended', 'Radie': 'expelled' };
+        params.status = statusMap[filterStatus];
+      }
+      const response = await studentService.getCardsPdf(params);
+      if (!response.data || response.data.size === 0) {
+        showModal('error', t('students.errorTitle'), t('students.errorPdfGeneratedEmpty'));
+        return;
+      }
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'cartes_eleves.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      const msg = error.response?.status ? `${t('students.errorPrefix')} ${error.response.status}` : error.message;
+      showModal('error', t('students.errorTitle'), `${t('students.errorListGeneration')} ${msg}`);
+    }
+  };
+
   const statusBadge = (status) => {
     const map = {
       active: 'bg-green-100 text-green-700',
@@ -193,6 +224,13 @@ const Students = () => {
             <p className="text-sm text-gray-500 mt-0.5">{t('students.subtitle')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handlePrintCards}
+            className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+          >
+            <CreditCard className="w-4 h-4 shrink-0" />
+            <span>{t('students.printCards')}</span>
+          </button>
           <button
             onClick={handlePrintList}
             className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -228,7 +266,7 @@ const Students = () => {
             <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{t('results.cycle')}</label>
             <select value={filterCycle} onChange={handleCycleChange} className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">{t('results.select')}</option>
-              {cycles.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {cycles.map((c) => <option key={c.id} value={c.name}>{c.display_name || c.name}</option>)}
             </select>
           </div>
           <div>

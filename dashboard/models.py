@@ -1,10 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
+from tenants.models import Tenant
 
 class Statistic(models.Model):
     name = models.CharField(max_length=100)
     value = models.IntegerField()
     date = models.DateField(auto_now_add=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     description = models.TextField(blank=True)
     
     def __str__(self):
@@ -23,6 +25,8 @@ class ActivityLog(models.Model):
     object_repr = models.CharField(max_length=200)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True, related_name='dashboard_activity_logs')
+
     def __str__(self):
         return f"{self.user} - {self.action} - {self.model_name}"
 

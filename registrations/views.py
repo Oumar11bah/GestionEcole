@@ -6,8 +6,9 @@ from .serializers import RegistrationSerializer
 from students.models import Student
 from rest_framework.permissions import IsAuthenticated
 from accounts.permissions import CanManageStudents
+from accounts.utils import TenantAwareMixin, get_request_tenant
 
-class RegistrationViewSet(viewsets.ModelViewSet):
+class RegistrationViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageStudents]
     module = 'registrations'
     queryset = Registration.objects.all().order_by('student__last_name', 'student__first_name')
@@ -42,6 +43,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_409_CONFLICT
             )
 
+        tenant = get_request_tenant(request)
         registration = Registration.objects.create(
             student=student,
             class_assigned_id=class_id,
@@ -49,6 +51,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
             is_re_registration=is_re_registration,
             previous_class_id=previous_class_id,
             status='pending',
+            tenant=tenant,
         )
 
         serializer = self.get_serializer(registration)

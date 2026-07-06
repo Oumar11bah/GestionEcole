@@ -1,91 +1,93 @@
 from rest_framework import permissions
+from .utils import get_user_role, has_profile_access
 
 class IsSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.profile.role == 'super_admin'
+        return request.user.is_authenticated and get_user_role(request.user) == 'super_admin'
 
 class IsAdminOrSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.role in ['super_admin', 'admin']
+        return get_user_role(request.user) in ['super_admin', 'admin']
 
 class CanManageUsers(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.role in ['super_admin', 'admin']
+        return get_user_role(request.user) in ['super_admin', 'admin']
 
 class CanViewActivity(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.role in ['super_admin', 'admin', 'directeur']
+        return get_user_role(request.user) in ['super_admin', 'admin', 'directeur']
 
 class CanManageStudents(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('students')
+        return has_profile_access(request.user, 'students')
 
 class CanManageTeachers(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('teachers')
+        return has_profile_access(request.user, 'teachers')
 
 class CanManagePayments(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('payments')
+        return has_profile_access(request.user, 'payments')
 
 class CanManageGrades(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('grades')
+        return has_profile_access(request.user, 'grades')
 
 class CanManageRooms(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('rooms')
+        return has_profile_access(request.user, 'rooms')
 
 class CanManageClasses(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('classes')
+        return has_profile_access(request.user, 'classes')
 
 class CanManageAttendance(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('attendance')
+        return has_profile_access(request.user, 'attendance')
 
 class CanManageSchool(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.role in ['super_admin', 'admin']
+        return get_user_role(request.user) in ['super_admin', 'admin']
 
 class CanManageSalaries(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.role in ['super_admin', 'admin', 'comptable']
+        return get_user_role(request.user) in ['super_admin', 'admin', 'comptable']
 
 class CanExportData(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.profile.can_access('reports')
+        return has_profile_access(request.user, 'reports')
 
 class RoleBasedPermission(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        profile = request.user.profile
         module = getattr(view, 'module', None)
-        return profile.can_access(module) if module else True
+        if not module:
+            return True
+        return has_profile_access(request.user, module)

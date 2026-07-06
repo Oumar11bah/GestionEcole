@@ -44,8 +44,8 @@ const Subjects = () => {
 
   const getCycleBadges = (cycleDetails) => {
     if (!Array.isArray(cycleDetails) || cycleDetails.length === 0) return <span className="text-gray-400 text-xs">--</span>;
-    const labels = { primaire: 'bg-green-100 text-green-700', college: 'bg-blue-100 text-blue-700', lycee: 'bg-purple-100 text-purple-700' };
-    const names = { primaire: t('subjects.cyclePrimaire'), college: t('subjects.cycleCollege'), lycee: t('subjects.cycleLycee') };
+    const labels = { primaire: 'bg-green-100 text-green-700', college: 'bg-blue-100 text-blue-700', lycee: 'bg-purple-100 text-purple-700', prescolaire: 'bg-orange-100 text-orange-700' };
+    const names = { primaire: t('subjects.cyclePrimaire'), college: t('subjects.cycleCollege'), lycee: t('subjects.cycleLycee'), prescolaire: t('subjects.cyclePrescolaire') };
     return (
       <div className="flex space-x-1">
         {cycleDetails.map((c) => {

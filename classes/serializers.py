@@ -3,9 +3,14 @@ from .models import Cycle, Class, ScheduleEntry
 from teachers.models import Teacher
 
 class CycleSerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Cycle
-        fields = ['id', 'name', 'description']
+        fields = ['id', 'name', 'display_name', 'description', 'tenant']
+
+    def get_display_name(self, obj):
+        return obj.get_name_display()
 
 class ClassSerializer(serializers.ModelSerializer):
     cycle = CycleSerializer(read_only=True)
@@ -16,7 +21,7 @@ class ClassSerializer(serializers.ModelSerializer):
     class Meta:
         model = Class
         fields = ['id', 'name', 'display_name', 'cycle', 'cycle_name',
-                  'specialty', 'capacity', 'academic_year',
+                  'specialty', 'capacity', 'academic_year', 'tenant',
                   'class_teacher', 'student_count', 'created_at']
     
     def get_student_count(self, obj):
@@ -52,7 +57,7 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = ScheduleEntry
         fields = ['id', 'class_assigned', 'class_assigned_id', 'subject_name', 'teacher_name',
-                  'room', 'day', 'start_time', 'end_time', 'observation']
+                  'room', 'day', 'start_time', 'end_time', 'observation', 'tenant']
 
     def validate(self, attrs):
         instance_id = self.instance.id if self.instance else None

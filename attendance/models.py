@@ -1,6 +1,7 @@
 from django.db import models
 from students.models import Student
 from teachers.models import Teacher
+from tenants.models import Tenant
 
 class Attendance(models.Model):
     STATUS_CHOICES = [
@@ -15,6 +16,7 @@ class Attendance(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
     recorded_by = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='recorded_attendances')
     comment = models.TextField(blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

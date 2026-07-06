@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from students.models import Student
+from tenants.models import Tenant
 
 class Message(models.Model):
     MESSAGE_TYPES = [
@@ -15,6 +16,7 @@ class Message(models.Model):
     content = models.TextField()
     message_type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default='info')
     is_read = models.BooleanField(default=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -37,6 +39,7 @@ class Notification(models.Model):
     message = models.TextField()
     related_student = models.ForeignKey(Student, on_delete=models.CASCADE, null=True, blank=True)
     is_read = models.BooleanField(default=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

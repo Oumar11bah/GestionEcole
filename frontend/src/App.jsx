@@ -33,6 +33,9 @@ import Profile from './pages/Profile';
 import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
 import PermissionGuard from './components/PermissionGuard';
+import TenantManagement from './pages/TenantManagement';
+import TenantRegistration from './pages/TenantRegistration';
+import LicenseManagement from './pages/LicenseManagement';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -49,6 +52,7 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register-school" element={<TenantRegistration />} />
           <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
           <Route path="/students" element={<PrivateRoute><Layout><Students /></Layout></PrivateRoute>} />
           <Route path="/students/new" element={<PrivateRoute><Layout><StudentForm /></Layout></PrivateRoute>} />
@@ -81,6 +85,24 @@ const App = () => {
           <Route path="/roles" element={<PrivateRoute><Layout><PermissionGuard module="users"><RoleManagement /></PermissionGuard></Layout></PrivateRoute>} />
           <Route path="/activity" element={<PrivateRoute><Layout><ActivityHistory /></Layout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Layout><Profile /></Layout></PrivateRoute>} />
+          <Route path="/tenants" element={
+            <PrivateRoute>
+              <Layout>
+                <PermissionGuard module="users">
+                  <TenantManagement />
+                </PermissionGuard>
+              </Layout>
+            </PrivateRoute>
+          } />
+          <Route path="/licences" element={
+            <PrivateRoute>
+              <Layout>
+                <PermissionGuard module="users">
+                  <LicenseManagement />
+                </PermissionGuard>
+              </Layout>
+            </PrivateRoute>
+          } />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>

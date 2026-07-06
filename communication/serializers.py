@@ -11,7 +11,7 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'sender_id', 'recipient', 'recipient_id', 'subject', 'content', 'message_type', 'is_read', 'created_at']
+        fields = ['id', 'sender', 'sender_id', 'recipient', 'recipient_id', 'subject', 'content', 'message_type', 'is_read', 'tenant', 'created_at']
     
     def create(self, validated_data):
         validated_data['sender'] = User.objects.get(id=validated_data.pop('sender_id'))
@@ -26,7 +26,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Notification
-        fields = ['id', 'recipient', 'recipient_id', 'notification_type', 'title', 'message', 'is_read', 'related_student', 'related_student_id', 'created_at']
+        fields = ['id', 'recipient', 'recipient_id', 'notification_type', 'title', 'message', 'is_read', 'related_student', 'related_student_id', 'tenant', 'created_at']
     
     def create(self, validated_data):
         validated_data['recipient'] = User.objects.get(id=validated_data.pop('recipient_id'))

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { User, Lock, Globe, Save, Loader, School, Megaphone, Plus, Trash2, X, Eye, EyeOff, Calendar } from 'lucide-react';
+import { User, Lock, Globe, Save, Loader, School, Megaphone, Plus, Trash2, Archive, X, Eye, EyeOff, Calendar } from 'lucide-react';
 import { authService, schoolService, userService, communicationService, academicYearService, semesterService } from '../services/api';
 import { applyThemeColors } from '../utils/theme';
 import { getDefaultAcademicYear, fetchAcademicYears as fetchSharedAcademicYears } from '../utils/preferences';
@@ -35,7 +35,6 @@ const Settings = () => {
   const [schoolForm, setSchoolForm] = useState({
     name: '', acronym: '', address: '', phone: '', email: '', website: '',
     director_name: '', academic_year: getDefaultAcademicYear() || '', city: '', country: 'Guinée',
-    primary_color: '#1e40af', secondary_color: '#3b82f6',
   });
   const [schoolLogo, setSchoolLogo] = useState(null);
   const [schoolLogoPreview, setSchoolLogoPreview] = useState(null);
@@ -45,8 +44,11 @@ const Settings = () => {
   const [preferencesForm, setPreferencesForm] = useState({
     language: user?.profile?.language || 'fr',
     preferred_academic_year: user?.profile?.preferred_academic_year || '',
+    primary_color: user?.profile?.primary_color || '#1e40af',
+    secondary_color: user?.profile?.secondary_color || '#3b82f6',
   });
   const [academicYears, setAcademicYears] = useState([]);
+  const [archivedYears, setArchivedYears] = useState([]);
   const [showAddYear, setShowAddYear] = useState(false);
   const [newYearName, setNewYearName] = useState('');
   const [semesters, setSemesters] = useState([]);
@@ -62,8 +64,12 @@ const Settings = () => {
   };
 
   useEffect(() => {
+    if (user?.profile?.primary_color) {
+      applyThemeColors(user.profile.primary_color, user.profile.secondary_color);
+    }
     fetchSchoolInfo();
     fetchAcademicYears();
+    fetchArchivedYears();
     fetchSemesters();
   }, []);
 
@@ -72,8 +78,6 @@ const Settings = () => {
       const res = await schoolService.get();
       if (res.data && res.data.id) {
         setSchoolId(res.data.id);
-        const primary = res.data.primary_color || '#1e40af';
-        const secondary = res.data.secondary_color || '#3b82f6';
         setSchoolForm({
           name: res.data.name || '', acronym: res.data.acronym || '',
           address: res.data.address || '', phone: res.data.phone || '',
@@ -81,10 +85,7 @@ const Settings = () => {
           director_name: res.data.director_name || '',
           academic_year: res.data.academic_year || getDefaultAcademicYear() || '',
           city: res.data.city || '', country: res.data.country || 'Guinée',
-          primary_color: primary,
-          secondary_color: secondary,
         });
-        applyThemeColors(primary, secondary);
         if (res.data.logo_url) setSchoolLogoPreview(res.data.logo_url);
         if (res.data.signature_url) setSchoolSignaturePreview(res.data.signature_url);
       }
@@ -102,6 +103,14 @@ const Settings = () => {
     try {
       const res = await semesterService.getAll();
       setSemesters(Array.isArray(res.data) ? res.data : (res.data?.results || []));
+    } catch {}
+  };
+
+  const fetchArchivedYears = async () => {
+    try {
+      const res = await academicYearService.getAll({ include_archived: 'true' });
+      const all = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      setArchivedYears(all.filter((y) => y.archived));
     } catch {}
   };
 
@@ -156,23 +165,47 @@ const Settings = () => {
       await academicYearService.create({ name: newYearName.trim() });
       setNewYearName('');
       setShowAddYear(false);
-      fetchAcademicYears();
-      fetchSharedAcademicYears(true);
+      await Promise.all([fetchAcademicYears(), fetchArchivedYears(), fetchSharedAcademicYears(true)]);
       showModal('success', t('settings.success'), t('settings.yearAdded', { year: newYearName.trim() }));
     } catch (err) {
-      const detail = err.response?.data?.name?.[0] || err.response?.data?.detail || t('settings.yearAddError');
-      showModal('error', t('settings.error'), detail);
+      const detail = err.response?.data?.name?.[0] || err.response?.data?.detail || '';
+      if (!detail || detail.toLowerCase().includes('existe d') || detail.toLowerCase().includes('already exists')) {
+        try {
+          const res = await academicYearService.getAll({ include_archived: 'true' });
+          const all = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+          const existing = all.find((y) => y.name === newYearName.trim());
+          if (existing?.archived) {
+            await academicYearService.unarchive(existing.id);
+          }
+        } catch {}
+        setNewYearName('');
+        setShowAddYear(false);
+        await Promise.all([fetchAcademicYears(), fetchArchivedYears(), fetchSharedAcademicYears(true)]);
+        showModal('success', t('settings.success'), t('settings.yearAdded', { year: newYearName.trim() }));
+      } else {
+        showModal('error', t('settings.error'), detail);
+      }
     }
   };
 
   const handleDeleteYear = async (id) => {
     try {
       await academicYearService.delete(id);
-      fetchAcademicYears();
-      fetchSharedAcademicYears(true);
-      showModal('success', t('settings.success'), t('settings.yearDeleted'));
+      await Promise.all([fetchAcademicYears(), fetchArchivedYears(), fetchSharedAcademicYears(true)]);
+      showModal('success', t('settings.success'), t('settings.yearArchived'));
     } catch (err) {
-      const detail = err.response?.data?.detail || err.response?.data?.error || JSON.stringify(err.response?.data) || t('settings.yearDeleteError');
+      const detail = err.response?.data?.detail || err.response?.data?.error || JSON.stringify(err.response?.data) || t('settings.yearArchiveError');
+      showModal('error', t('settings.error'), detail);
+    }
+  };
+
+  const handleUnarchiveYear = async (id) => {
+    try {
+      await academicYearService.unarchive(id);
+      await Promise.all([fetchAcademicYears(), fetchArchivedYears(), fetchSharedAcademicYears(true)]);
+      showModal('success', t('settings.success'), t('settings.yearUnarchived'));
+    } catch (err) {
+      const detail = err.response?.data?.detail || t('settings.yearUnarchiveError');
       showModal('error', t('settings.error'), detail);
     }
   };
@@ -183,6 +216,7 @@ const Settings = () => {
       { id: 'school', label: t('settings.tab.school'), icon: School },
       { id: 'preferences', label: t('settings.tab.preferences'), icon: Globe },
       { id: 'alerts', label: t('settings.tab.alerts'), icon: Megaphone },
+      { id: 'archives', label: t('settings.tab.archives'), icon: Archive },
     ] : []),
   ];
 
@@ -238,10 +272,14 @@ const Settings = () => {
       const res = await authService.updateProfile(user.id, {
         language: preferencesForm.language,
         preferred_academic_year: preferencesForm.preferred_academic_year,
+        primary_color: preferencesForm.primary_color,
+        secondary_color: preferencesForm.secondary_color,
       });
       const updatedUser = { ...res.data.user, profile: res.data.profile };
       updateUser(updatedUser);
+      localStorage.setItem('edumanager_user', JSON.stringify(updatedUser));
       changeLanguage(preferencesForm.language);
+      applyThemeColors(preferencesForm.primary_color, preferencesForm.secondary_color);
       showModal('success', t('settings.success'), t('settings.preferencesSaved'));
     } catch (err) {
       showModal('error', t('settings.error'), t('settings.saveError'));
@@ -259,7 +297,6 @@ const Settings = () => {
       if (schoolLogo) formData.append('logo', schoolLogo);
       if (schoolSignature) formData.append('director_signature', schoolSignature);
       await schoolService.update(formData);
-      applyThemeColors(schoolForm.primary_color, schoolForm.secondary_color);
       showModal('success', t('settings.success'), t('settings.schoolUpdated'));
       setSchoolLogo(null);
       setSchoolSignature(null);
@@ -457,22 +494,6 @@ const Settings = () => {
                   <input value={schoolForm.website} onChange={(e) => setSchoolForm({...schoolForm, website: e.target.value})} className="w-full border rounded-lg px-4 py-2 text-sm" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>{t('settings.school.primaryColor')}</Label>
-                  <div className="flex items-center space-x-2">
-                    <input type="color" value={schoolForm.primary_color} onChange={(e) => { setSchoolForm({...schoolForm, primary_color: e.target.value}); applyThemeColors(e.target.value, schoolForm.secondary_color); }} className="w-10 h-10 rounded border cursor-pointer" />
-                    <span className="text-xs text-gray-500">{schoolForm.primary_color}</span>
-                  </div>
-                </div>
-                <div>
-                  <Label>{t('settings.school.secondaryColor')}</Label>
-                  <div className="flex items-center space-x-2">
-                    <input type="color" value={schoolForm.secondary_color} onChange={(e) => setSchoolForm({...schoolForm, secondary_color: e.target.value})} className="w-10 h-10 rounded border cursor-pointer" />
-                    <span className="text-xs text-gray-500">{schoolForm.secondary_color}</span>
-                  </div>
-                </div>
-              </div>
               <div className="flex justify-end">
                 <button type="submit" disabled={saving} className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">
                   {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -480,30 +501,6 @@ const Settings = () => {
                 </button>
               </div>
             </form>
-          )}
-
-          {activeTab === 'notifications' && (
-            <div className="max-w-2xl space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.notifications.title')}</h3>
-              {[
-                { label: t('settings.notifications.emailLabel'), desc: t('settings.notifications.emailDesc'), key: 'email' },
-                { label: t('settings.notifications.smsLabel'), desc: t('settings.notifications.smsDesc'), key: 'sms' },
-                { label: t('settings.notifications.absencesLabel'), desc: t('settings.notifications.absencesDesc'), key: 'absences' },
-                { label: t('settings.notifications.paymentsLabel'), desc: t('settings.notifications.paymentsDesc'), key: 'payments' },
-                { label: t('settings.notifications.gradesLabel'), desc: t('settings.notifications.gradesDesc'), key: 'grades' },
-              ].map((item) => (
-                <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{item.label}</p>
-                    <p className="text-sm text-gray-500">{item.desc}</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-              ))}
-            </div>
           )}
 
           {activeTab === 'preferences' && (
@@ -536,9 +533,9 @@ const Settings = () => {
                       <span key={y.id} className="inline-flex items-center space-x-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
                         <span>{y.name}{y.is_active ? ` (${t('settings.preferences.inProgress')})` : ''}</span>
                         {canDeleteYear && (
-                          <button type="button" onClick={() => showModal('warning', t('settings.confirmTitle'), t('settings.preferences.deleteYearConfirm'), () => handleDeleteYear(y.id))}
-                            className="p-0.5 hover:bg-red-200 rounded transition-colors" title={t('settings.preferences.deleteYear')}>
-                            <Trash2 className="w-3 h-3 text-red-400 hover:text-red-600" />
+                          <button type="button" onClick={() => showModal('warning', t('settings.confirmTitle'), t('settings.preferences.archiveYearConfirm'), () => handleDeleteYear(y.id))}
+                            className="p-0.5 hover:bg-orange-200 rounded transition-colors" title={t('settings.preferences.archiveYear')}>
+                            <Archive className="w-3 h-3 text-orange-400 hover:text-orange-600" />
                           </button>
                         )}
                       </span>
@@ -586,6 +583,26 @@ const Settings = () => {
                 )}
               </div>
 
+              <div className="border-t border-gray-100 pt-6">
+                <h4 className="text-base font-semibold text-gray-900 mb-4">{t('settings.preferences.theme')}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>{t('settings.school.primaryColor')}</Label>
+                    <div className="flex items-center space-x-2">
+                      <input type="color" value={preferencesForm.primary_color} onChange={(e) => { setPreferencesForm({...preferencesForm, primary_color: e.target.value}); applyThemeColors(e.target.value, preferencesForm.secondary_color); }} className="w-10 h-10 rounded border cursor-pointer" />
+                      <span className="text-xs text-gray-500">{preferencesForm.primary_color}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>{t('settings.school.secondaryColor')}</Label>
+                    <div className="flex items-center space-x-2">
+                      <input type="color" value={preferencesForm.secondary_color} onChange={(e) => setPreferencesForm({...preferencesForm, secondary_color: e.target.value})} className="w-10 h-10 rounded border cursor-pointer" />
+                      <span className="text-xs text-gray-500">{preferencesForm.secondary_color}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end">
                 <button type="submit" disabled={saving}
                   className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50">
@@ -598,6 +615,31 @@ const Settings = () => {
 
           {activeTab === 'alerts' && (
             <AlertsTab communicationService={communicationService} />
+          )}
+
+          {activeTab === 'archives' && (
+            <div className="max-w-2xl space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.archives.title')}</h3>
+              {archivedYears.length === 0 ? (
+                <p className="text-sm text-gray-400">{t('settings.archives.empty')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {archivedYears.map((y) => (
+                    <div key={y.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <Archive className="w-4 h-4 text-orange-500" />
+                        <span className="text-sm font-medium text-gray-900">{y.name}</span>
+                      </div>
+                      <button type="button" onClick={() => handleUnarchiveYear(y.id)}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors">
+                        <Archive className="w-4 h-4" />
+                        <span>{t('settings.archives.unarchive')}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

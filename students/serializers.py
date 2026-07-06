@@ -27,7 +27,7 @@ def humanize_error(field, message):
 class ParentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parent
-        fields = ['id', 'full_name', 'phone_number', 'email', 'address', 'quartier', 'commune', 'city', 'country', 'profession']
+        fields = ['id', 'full_name', 'phone_number', 'email', 'address', 'quartier', 'commune', 'city', 'country', 'profession', 'tenant']
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -51,7 +51,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'class_assigned', 'class_assigned_name', 'class_assigned_id',
             'parent', 'parent_details', 'parent_id',
             'parent_full_name', 'parent_phone_number', 'parent_profession', 'parent_quartier',
-            'academic_year', 'enrollment_date', 'created_at', 'updated_at',
+            'academic_year', 'enrollment_date', 'tenant', 'created_at', 'updated_at',
         ]
 
     def get_class_assigned_name(self, obj):

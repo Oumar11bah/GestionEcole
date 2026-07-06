@@ -1,15 +1,21 @@
 from django.db import models
 from teachers.models import Teacher
+from tenants.models import Tenant
 
 class Cycle(models.Model):
     CYCLE_CHOICES = [
         ('primaire', 'Primaire'),
         ('college', 'Collège'),
         ('lycee', 'Lycée'),
+        ('prescolaire', 'Préscolaire'),
     ]
 
-    name = models.CharField(max_length=20, choices=CYCLE_CHOICES, unique=True)
+    name = models.CharField(max_length=20, choices=CYCLE_CHOICES)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     description = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('name', 'tenant')
 
     def __str__(self):
         return self.get_name_display()
@@ -38,6 +44,7 @@ class Class(models.Model):
     capacity = models.IntegerField(default=40, help_text="Capacité maximale d'élèves")
     main_room = models.ForeignKey('rooms.Room', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_classes')
     academic_year = models.CharField(max_length=9, default='2024-2025')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -75,6 +82,7 @@ class ScheduleEntry(models.Model):
     teacher_name = models.CharField(max_length=200, blank=True)
     room = models.CharField(max_length=20, blank=True)
     observation = models.TextField(blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return f"{self.subject_name} - {self.day} {self.start_time}-{self.end_time}"

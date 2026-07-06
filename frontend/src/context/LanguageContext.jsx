@@ -10,16 +10,21 @@ export const LanguageProvider = ({ children }) => {
 
   const changeLanguage = useCallback((lng) => {
     i18n.changeLanguage(lng);
-    localStorage.setItem('i18nextLng', lng);
-  }, [i18n]);
+    // Only persist to localStorage for super_admin so login page keeps his language
+    if (user?.profile?.role === 'super_admin') {
+      localStorage.setItem('i18nextLng', lng);
+    }
+  }, [i18n, user]);
 
   useEffect(() => {
     if (user?.profile?.language) {
       const lang = user.profile.language;
       i18n.changeLanguage(lang);
-      localStorage.setItem('i18nextLng', lang);
+      if (user.profile.role === 'super_admin') {
+        localStorage.setItem('i18nextLng', lang);
+      }
     }
-  }, [user?.profile?.language, i18n]);
+  }, [user?.profile?.language, user?.profile?.role, i18n]);
 
   return (
     <LanguageContext.Provider value={{ changeLanguage }}>

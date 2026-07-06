@@ -21,12 +21,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
                   'profile_picture',
                   'gender', 'date_of_birth', 'date_of_hire', 'is_active',
                   'language', 'preferred_academic_year', 'last_activity',
-                  'permissions',
+                  'permissions', 'tenant', 'tenant_id',
+                  'primary_color', 'secondary_color', 'theme',
                   'created_by', 'created_at', 'updated_at']
-        read_only_fields = ['profile_picture', 'created_at', 'updated_at', 'created_by']
+        read_only_fields = ['profile_picture', 'created_at', 'updated_at', 'created_by', 'tenant', 'tenant_id']
 
     def get_role_display(self, obj):
-        return obj.get_role_display()
+        from .models import Role
+        role_obj = Role.get_or_default(obj.role)
+        return role_obj.display_name
 
     def get_permissions(self, obj):
         role_obj = Role.get_or_default(obj.role)
@@ -65,8 +68,7 @@ class UserCreateSerializer(serializers.Serializer):
     role = serializers.CharField()
 
     def validate_role(self, value):
-        if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError(f"Le rôle '{value}' n'existe pas")
+        Role.get_or_default(value)
         return value
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
     address = serializers.CharField(required=False, allow_blank=True)
@@ -98,8 +100,7 @@ class UserUpdateSerializer(serializers.Serializer):
     role = serializers.CharField(required=False)
 
     def validate_role(self, value):
-        if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError(f"Le rôle '{value}' n'existe pas")
+        Role.get_or_default(value)
         return value
     phone_number = serializers.CharField(max_length=15, required=False, allow_blank=True)
     address = serializers.CharField(required=False, allow_blank=True)
@@ -109,6 +110,9 @@ class UserUpdateSerializer(serializers.Serializer):
     date_of_hire = serializers.DateField(required=False, allow_null=True)
     language = serializers.CharField(max_length=10, required=False, allow_blank=True)
     preferred_academic_year = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    primary_color = serializers.CharField(max_length=7, required=False, allow_blank=True)
+    secondary_color = serializers.CharField(max_length=7, required=False, allow_blank=True)
+    theme = serializers.CharField(max_length=10, required=False, allow_blank=True)
 
 
 class SelfProfileSerializer(serializers.Serializer):
@@ -122,6 +126,9 @@ class SelfProfileSerializer(serializers.Serializer):
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     language = serializers.CharField(max_length=10, required=False, allow_blank=True)
     preferred_academic_year = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    primary_color = serializers.CharField(max_length=7, required=False, allow_blank=True)
+    secondary_color = serializers.CharField(max_length=7, required=False, allow_blank=True)
+    theme = serializers.CharField(max_length=10, required=False, allow_blank=True)
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -188,8 +195,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             data = super().validate(attrs)
         except AuthenticationFailed:
             raise AuthenticationFailed("Nom d'utilisateur ou mot de passe incorrect")
+        profile = getattr(self.user, 'profile', None)
+        if profile and profile.tenant:
+            if not profile.tenant.is_active:
+                raise AuthenticationFailed("Votre établissement a été désactivé. Veuillez contacter le super admin.")
+            if profile.tenant.is_pending:
+                raise AuthenticationFailed("Votre compte est en attente d'activation.")
         data['user'] = UserSerializer(self.user).data
-        data['profile'] = UserProfileSerializer(self.user.profile).data
+        data['profile'] = UserProfileSerializer(profile).data if profile else None
         if hasattr(self.user, 'teacher_profile') and self.user.teacher_profile:
             data['teacher_profile'] = TeacherProfileMinSerializer(self.user.teacher_profile).data
         return data
@@ -237,8 +250,20 @@ class RoleSerializer(serializers.ModelSerializer):
     def get_label(self, obj):
         return obj.display_name
 
-    def get_user_count(self, obj):
-        return UserProfile.objects.filter(role=obj.name).count()
+    def validate_name(self, value):
+        from .models import Role
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            from .utils import get_request_tenant, get_user_role
+            role = get_user_role(request.user)
+            if role == 'super_admin':
+                if Role.objects.filter(name=value, tenant__isnull=True).exists():
+                    raise serializers.ValidationError("Un rôle système avec ce nom existe déjà")
+            else:
+                tenant = get_request_tenant(request)
+                if tenant and Role.objects.filter(name=value, tenant=tenant).exists():
+                    raise serializers.ValidationError("Un rôle avec ce nom existe déjà dans votre établissement")
+        return value
 
     def get_label(self, obj):
         return obj.display_name

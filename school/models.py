@@ -1,14 +1,21 @@
 from django.db import models
+from tenants.models import Tenant
 
 class AcademicYear(models.Model):
-    name = models.CharField(max_length=9, unique=True, help_text="Ex: 2024-2025")
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='academic_years')
+    name = models.CharField(max_length=9, help_text="Ex: 2024-2025")
     is_active = models.BooleanField(default=False)
+    archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Année académique"
         verbose_name_plural = "Années académiques"
         ordering = ['-name']
+        constraints = [
+            models.UniqueConstraint(fields=['tenant', 'name'], name='unique_academic_year_per_tenant')
+        ]
 
     def __str__(self):
         return self.name
@@ -41,6 +48,8 @@ class Semester(models.Model):
         super().save(*args, **kwargs)
 
 class SchoolInfo(models.Model):
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='school_info')
     name = models.CharField(max_length=200, default="École")
     acronym = models.CharField(max_length=20, blank=True, help_text="Sigle de l'école")
     address = models.TextField(blank=True)
@@ -61,12 +70,10 @@ class SchoolInfo(models.Model):
     class Meta:
         verbose_name = "Information de l'école"
         verbose_name_plural = "Informations de l'école"
+        unique_together = ['tenant', 'id']
 
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
-        if not SchoolInfo.objects.filter(id=self.id).exists() and SchoolInfo.objects.exists() and not self.id:
-            existing = SchoolInfo.objects.first()
-            self.id = existing.id
         super().save(*args, **kwargs)

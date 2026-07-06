@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, CheckCircle, Clock, XCircle, Eye, Pencil, Trash2, X, Save, DollarSign, CreditCard, Users, Receipt, Printer, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Search, CheckCircle, Clock, XCircle, Eye, Pencil, Trash2, X, Save, DollarSign, CreditCard, Users, Receipt, Printer, AlertCircle, RefreshCw, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { paymentService, studentService, classService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import Label from '../components/Label';
@@ -35,6 +35,116 @@ const monthOptions = [
   { key: 'december', value: 'Décembre' },
 ];
 
+const PaymentHistoryList = ({ onViewPayment, onPrintReceipt }) => {
+  const { t } = useTranslation();
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 30;
+
+  useEffect(() => {
+    setLoading(true);
+    paymentService.getPaymentHistory({ page, page_size: pageSize })
+      .then(res => {
+        const data = res.data;
+        setHistory(data.results || data);
+        setTotal(data.count || (data.results ? data.results.length : data.length));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [page]);
+
+  const filtered = history.filter(h =>
+    !search || (h.student || '').toLowerCase().includes(search.toLowerCase()) ||
+    (h.receipt_number || '').toLowerCase().includes(search.toLowerCase()) ||
+    (h.fee_type || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  return (
+    <>
+      <div className="p-4 border-b flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={t('common.search')}
+            className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="text-xs text-gray-500 uppercase tracking-wider bg-gray-50">
+              <th className="px-4 py-3 text-left w-10">#</th>
+              <th className="px-4 py-3 text-left">{t('payments.date')}</th>
+              <th className="px-4 py-3 text-left">{t('payments.student')}</th>
+              <th className="px-4 py-3 text-left">{t('payments.matricule')}</th>
+              <th className="px-4 py-3 text-left">{t('payments.fee')}</th>
+              <th className="px-4 py-3 text-right">{t('payments.amount')}</th>
+              <th className="px-4 py-3 text-left">{t('payments.receipt_no')}</th>
+              <th className="px-4 py-3 text-left">{t('payments.received_by')}</th>
+              <th className="px-4 py-3 text-center">{t('payments.actions')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              <tr><td colSpan="9" className="px-4 py-8 text-center text-sm text-gray-400">{t('payments.loading')}</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan="9" className="px-4 py-8 text-center text-sm text-gray-400">{t('payments.no_payments')}</td></tr>
+            ) : filtered.map((h, i) => (
+              <tr key={h.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-sm text-gray-400">{(page - 1) * pageSize + i + 1}</td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {new Date(h.payment_date || h.created_at).toLocaleDateString('fr-FR')}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900">{h.student}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 font-mono">{h.student_matricule}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">{h.fee_type}</td>
+                <td className="px-4 py-3 text-sm font-bold text-green-600 text-right">+{Number(h.amount).toLocaleString()} GNF</td>
+                <td className="px-4 py-3 text-sm text-purple-600 font-mono">{h.receipt_number || '—'}</td>
+                <td className="px-4 py-3 text-sm text-gray-500">{h.received_by || '—'}</td>
+                <td className="px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <button onClick={() => onViewPayment && onViewPayment(h.payment_id)}
+                      className="w-7 h-7 flex items-center justify-center text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
+                      title={t('payments.view_details')}>
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => onPrintReceipt && onPrintReceipt(h.payment_id, h.amount)}
+                      className="w-7 h-7 flex items-center justify-center text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
+                      title={t('payments.print_receipt')}>
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t">
+          <span className="text-sm text-gray-500">{t('payments.total')}: {total}</span>
+          <div className="flex gap-1">
+            <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="p-1.5 hover:bg-gray-100 rounded disabled:opacity-30">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-3 py-1.5 text-sm font-medium text-gray-700">{page} / {totalPages}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+              className="p-1.5 hover:bg-gray-100 rounded disabled:opacity-30">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const Payments = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -48,6 +158,7 @@ const Payments = () => {
   const [filterClass, setFilterClass] = useState('');
   const [filterFeeType, setFilterFeeType] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('');
+  const [expandedStudent, setExpandedStudent] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
   const [form, setForm] = useState({
@@ -63,6 +174,10 @@ const Payments = () => {
   const [feeTypeForm, setFeeTypeForm] = useState({ name: '', description: '', amount: '', cycle: 'all', is_active: true });
   const [editingFeeType, setEditingFeeType] = useState(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
+  const [partialPayment, setPartialPayment] = useState(null);
+  const [partialAmount, setPartialAmount] = useState('');
+  const [savingPartial, setSavingPartial] = useState(false);
+  const [activeTab, setActiveTab] = useState('payments');
 
   const showModal = (variant, title, message, onConfirm) => {
     setModal({ open: true, variant, title, message, onConfirm, confirmLabel: onConfirm ? t('payments.confirm') : '' });
@@ -101,7 +216,20 @@ const Payments = () => {
   }, [payments]);
 
   const filteredStudents = studentSearch.length > 0
-    ? students.filter((s) => `${s.first_name} ${s.last_name} ${s.matricule} ${s.class_assigned_name || ''}`.toLowerCase().includes(studentSearch.toLowerCase()))
+    ? students.filter((s) => {
+        const searchMatch = `${s.first_name} ${s.last_name} ${s.matricule} ${s.class_assigned_name || ''}`.toLowerCase().includes(studentSearch.toLowerCase());
+        if (!searchMatch) return false;
+        if (form.fee_type_id && form.academic_year && form.month_concerned) {
+          const alreadyPaid = payments.some(p =>
+            p.student_matricule === s.matricule &&
+            p.academic_year === form.academic_year &&
+            p.month_concerned === form.month_concerned &&
+            (p.status === 'completed' || p.status === 'partial')
+          );
+          if (alreadyPaid) return false;
+        }
+        return true;
+      })
     : [];
 
   const selectedStudent = students.find((s) => s.id === parseInt(form.student_id));
@@ -123,6 +251,23 @@ const Payments = () => {
       return matchSearch && matchStatus && matchPeriod && matchClass && matchFeeType;
     });
   }, [payments, search, filterStatus, filterClass, filterFeeType, filterPeriod, students, feeTypes]);
+
+  const groupedPayments = useMemo(() => {
+    const map = {};
+    filtered.forEach(p => {
+      const key = p.student_matricule || p.student;
+      if (!map[key]) {
+        map[key] = { student: p.student, student_matricule: p.student_matricule, student_photo_url: p.student_photo_url, payments: [], totalPaid: 0, totalDue: 0, months: [] };
+      }
+      map[key].payments.push(p);
+      map[key].totalPaid += parseFloat(p.amount_paid || 0);
+      map[key].totalDue += parseFloat(p.total_amount || 0);
+      if (p.month_concerned && !map[key].months.includes(p.month_concerned)) {
+        map[key].months.push(p.month_concerned);
+      }
+    });
+    return Object.values(map);
+  }, [filtered]);
 
   const remainingAmount = parseFloat(form.total_amount || 0) - parseFloat(form.amount_paid || 0);
 
@@ -273,7 +418,7 @@ const Payments = () => {
     });
   };
 
-  const printReceipt = (payment) => {
+  const printReceipt = (payment, additionalAmount) => {
     const printWin = window.open('', '_blank');
     if (!printWin) return;
     const cfg = statusConfig[payment.status] || statusConfig.pending;
@@ -308,7 +453,12 @@ const Payments = () => {
         <div class="row"><span class="label">${_t('payments.matricule')}</span><span class="value">${payment.student_matricule || ''}</span></div>
         <div class="row"><span class="label">${_t('payments.fee')}</span><span class="value">${payment.fee_type || ''}</span></div>
         <div class="row"><span class="label">${_t('payments.month')}</span><span class="value">${payment.month_concerned || '—'}</span></div>
+        ${additionalAmount ? `
+        <div class="amount-due">${Number(additionalAmount).toLocaleString()} GNF</div>
+        <div style="text-align:center;font-size:11px;color:#888;margin-bottom:8px">${_t('payments.additional_payment')}</div>
+        ` : `
         <div class="amount-due">${parseFloat(payment.amount_paid || 0).toLocaleString()} GNF</div>
+        `}
         <div class="row"><span class="label">${_t('payments.total_amount')}</span><span class="value">${parseFloat(payment.total_amount || payment.amount_paid || 0).toLocaleString()} GNF</span></div>
         <div class="row"><span class="label">${_t('payments.paid_amount')}</span><span class="value">${parseFloat(payment.amount_paid || 0).toLocaleString()} GNF</span></div>
         <div class="row"><span class="label">${_t('payments.remaining')}</span><span class="value">${(parseFloat(payment.total_amount || payment.amount_paid || 0) - parseFloat(payment.amount_paid || 0)).toLocaleString()} GNF</span></div>
@@ -406,6 +556,20 @@ const Payments = () => {
         </div>
       </div>
 
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+        <button onClick={() => setActiveTab('payments')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'payments' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>
+          <Receipt className="w-4 h-4 inline mr-1.5" />
+          {t('payments.title')}
+        </button>
+        <button onClick={() => setActiveTab('history')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>
+          <Clock className="w-4 h-4 inline mr-1.5" />
+          {t('payments.payment_history')}
+        </button>
+      </div>
+
+      {activeTab === 'payments' ? (<>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div>
@@ -456,7 +620,7 @@ const Payments = () => {
         </div>
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-400">
-            {filtered.length} {filtered.length > 1 ? t('payments.payments_plural') : t('payments.payments_singular')}
+            {groupedPayments.length} {groupedPayments.length > 1 ? t('payments.payments_plural') : t('payments.payments_singular')}
             {(filterStatus !== '' || filterClass || filterFeeType || filterPeriod || search) && (
               <span className="ml-1 text-gray-300">({t('payments.filtered')})</span>
             )}
@@ -475,18 +639,17 @@ const Payments = () => {
             <thead>
               <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-200">
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.student')}</th>
-                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.fee')}</th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.month')}</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.amount')}</th>
-                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.method')}</th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.status_title')}</th>
-                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.date')}</th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.payments_count')}</th>
                 <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('payments.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center">
+                  <td colSpan="6" className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center space-y-2">
                       <Receipt className="w-8 h-8 text-gray-300" />
                       <p className="text-sm text-gray-400">{t('payments.no_payments')}</p>
@@ -499,91 +662,143 @@ const Payments = () => {
                   </td>
                 </tr>
               ) : (
-                filtered.map((payment) => {
-                  const total = parseFloat(payment.total_amount || payment.amount_paid || 0);
-                  const paid = parseFloat(payment.amount_paid || 0);
+                groupedPayments.map((group) => {
+                  const isExpanded = expandedStudent === group.student_matricule;
+                  const total = group.totalDue;
+                  const paid = group.totalPaid;
                   const remaining = total - paid;
                   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
-                  const cfg = statusConfig[payment.status] || statusConfig.pending;
-                  const StatusIcon = cfg.icon;
+                  const allCompleted = group.payments.every(p => p.status === 'completed');
+                  const anyPartial = group.payments.some(p => p.status === 'partial');
+                  const aggStatus = allCompleted ? 'completed' : anyPartial ? 'partial' : group.payments[0]?.status || 'pending';
+                  const aggCfg = statusConfig[aggStatus] || statusConfig.pending;
+                  const AggStatusIcon = aggCfg.icon;
                   return (
-                    <tr key={payment.id} className="group hover:bg-blue-50/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center space-x-3">
-                          {payment.student_photo_url ? (
-                            <img src={payment.student_photo_url} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-gray-200 shrink-0" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-600 font-bold text-xs border-2 border-blue-100 shrink-0">
-                              {(payment.student || '?').charAt(0)}
+                    <React.Fragment key={group.student_matricule}>
+                      <tr className="group hover:bg-blue-50/30 transition-colors cursor-pointer"
+                        onClick={() => setExpandedStudent(isExpanded ? null : group.student_matricule)}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-3">
+                            {group.student_photo_url ? (
+                              <img src={group.student_photo_url} alt="" className="w-9 h-9 rounded-full object-cover border-2 border-gray-200 shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-600 font-bold text-xs border-2 border-blue-100 shrink-0">
+                                {(group.student || '?').charAt(0)}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{group.student}</div>
+                              <div className="text-xs text-gray-400 font-mono">{group.student_matricule}</div>
                             </div>
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{payment.student}</div>
-                            <div className="text-xs text-gray-400 font-mono">{payment.student_matricule}</div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-800">{payment.fee_type || '—'}</div>
-                        {payment.fee_type_amount != null && (
-                          <div className="text-xs text-gray-400">{parseFloat(payment.fee_type_amount).toLocaleString()} GNF</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1.5 min-w-[130px]">
-                          <div className="flex justify-between text-xs">
-                            <span className="font-semibold text-green-600">{paid.toLocaleString()} GNF</span>
-                            <span className="text-gray-400">{t('payments.of')} {total.toLocaleString()} GNF</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {group.months.map(m => (
+                              <span key={m} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full border border-gray-200">{m}</span>
+                            ))}
                           </div>
-                          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${remaining === 0 ? 'bg-green-500' : remaining < total ? 'bg-orange-400' : 'bg-red-400'}`}
-                              style={{ width: `${Math.min(pct, 100)}%` }}
-                            />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="space-y-1.5 min-w-[130px]">
+                            <div className="flex justify-between text-xs">
+                              <span className="font-semibold text-green-600">{paid.toLocaleString()} GNF</span>
+                              <span className="text-gray-400">{t('payments.of')} {total.toLocaleString()} GNF</span>
+                            </div>
+                            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${remaining === 0 ? 'bg-green-500' : remaining < total ? 'bg-orange-400' : 'bg-red-400'}`}
+                                style={{ width: `${Math.min(pct, 100)}%` }}
+                              />
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">{pct}%</span>
+                              {remaining > 0 && <span className="font-medium text-red-500">{t('payments.remaining')}: {remaining.toLocaleString()} GNF</span>}
+                            </div>
                           </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">{pct}%</span>
-                            {remaining > 0 && <span className="font-medium text-red-500">{t('payments.remaining')}: {remaining.toLocaleString()} GNF</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${aggCfg.bg}`}>
+                            <AggStatusIcon className="w-3.5 h-3.5" />
+                            <span>{t(aggCfg.label)}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
+                          {group.payments.length} {group.payments.length > 1 ? t('payments.payments_plural') : t('payments.payments_singular')}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <button onClick={(e) => { e.stopPropagation(); setViewPayment(group.payments[0]); }}
+                              className="w-8 h-8 flex items-center justify-center text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all"
+                              title={t('payments.view_details')}>
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); printReceipt(group.payments[0]); }}
+                              className="w-8 h-8 flex items-center justify-center text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all"
+                              title={t('payments.print_receipt')}>
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setExpandedStudent(isExpanded ? null : group.student_matricule); }}
+                              className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${isExpanded ? 'text-gray-600 bg-gray-100 border-gray-300' : 'text-gray-500 bg-gray-50 border-gray-200 hover:bg-gray-100'}`}
+                              title={isExpanded ? t('payments.collapse') : t('payments.expand')}>
+                              <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-gray-600">{t(methodLabels[payment.payment_method] || payment.payment_method)}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.bg}`}>
-                          <StatusIcon className="w-3.5 h-3.5" />
-                          <span>{t(cfg.label)}</span>
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                        {new Date(payment.payment_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setViewPayment(payment)}
-                            className="w-8 h-8 flex items-center justify-center text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all"
-                            title={t('payments.view_details')}>
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleEdit(payment)}
-                            className="w-8 h-8 flex items-center justify-center text-amber-600 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 hover:border-amber-300 transition-all"
-                            title={t('payments.edit')}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => printReceipt(payment)}
-                            className="w-8 h-8 flex items-center justify-center text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 hover:border-purple-300 transition-all"
-                            title={t('payments.print_receipt')}>
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDelete(payment.id)}
-                            className="w-8 h-8 flex items-center justify-center text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all"
-                            title={t('payments.delete')}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {isExpanded && group.payments.map((payment) => {
+                        const pTotal = parseFloat(payment.total_amount || payment.amount_paid || 0);
+                        const pPaid = parseFloat(payment.amount_paid || 0);
+                        const pRemaining = pTotal - pPaid;
+                        const pPct = pTotal > 0 ? Math.round((pPaid / pTotal) * 100) : 0;
+                        const cfg = statusConfig[payment.status] || statusConfig.pending;
+                        const StatusIcon = cfg.icon;
+                        return (
+                          <tr key={payment.id} className="bg-blue-50/30 hover:bg-blue-50/60 transition-colors">
+                            <td className="px-4 py-2.5 pl-10">
+                              <div className="text-sm text-gray-700">{payment.fee_type || '—'}</div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="text-xs bg-white text-gray-700 px-2 py-0.5 rounded-full border border-gray-200">{payment.month_concerned || '—'}</span>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="space-y-0.5 min-w-[110px]">
+                                <div className="flex justify-between text-xs">
+                                  <span className="font-semibold text-green-600">{pPaid.toLocaleString()} GNF</span>
+                                  <span className="text-gray-400">{t('payments.of')} {pTotal.toLocaleString()} GNF</span>
+                                </div>
+                                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${pRemaining === 0 ? 'bg-green-500' : 'bg-orange-400'}`} style={{ width: `${Math.min(pPct, 100)}%` }} />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs border ${cfg.bg}`}>
+                                <StatusIcon className="w-3 h-3" />
+                                <span>{t(cfg.label)}</span>
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-gray-500">
+                              {new Date(payment.payment_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={(e) => { e.stopPropagation(); setViewPayment(payment); }}
+                                  className="w-7 h-7 flex items-center justify-center text-blue-500 bg-white border border-blue-200 rounded hover:bg-blue-50 transition-all"
+                                  title={t('payments.view_details')}>
+                                  <Eye className="w-3 h-3" />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); printReceipt(payment); }}
+                                  className="w-7 h-7 flex items-center justify-center text-purple-500 bg-white border border-purple-200 rounded hover:bg-purple-50 transition-all"
+                                  title={t('payments.print_receipt')}>
+                                  <Printer className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -887,6 +1102,18 @@ const Payments = () => {
         </div>
       )}
 
+      </>) : (
+        <div className="bg-white rounded-2xl shadow-sm border">
+          <PaymentHistoryList
+            onViewPayment={(paymentId) => {
+              paymentService.getById(paymentId).then(res => setViewPayment(res.data)).catch(() => {});
+            }}
+            onPrintReceipt={(paymentId, historyAmount) => {
+              paymentService.getById(paymentId).then(res => printReceipt(res.data, historyAmount)).catch(() => {});
+            }}
+          />
+        </div>
+      )}
       {viewPayment && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setViewPayment(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -896,6 +1123,10 @@ const Payments = () => {
                 <span>{t('payments.payment_details')}</span>
               </h2>
               <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => { const p = viewPayment; setViewPayment(null); setTimeout(() => handleEdit(p), 100); }}
+                  className="p-2 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors" title={t('payments.edit_payment')}>
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => printReceipt(viewPayment)}
                   className="p-2 hover:bg-purple-50 rounded-lg text-purple-600 transition-colors" title={t('payments.print_receipt')}>
                   <Printer className="w-4 h-4" />
@@ -977,6 +1208,10 @@ const Payments = () => {
                   <div className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{t('payments.reference')}</div>
                   <div className="text-sm font-semibold text-gray-900">{viewPayment.reference || '—'}</div>
                 </div>
+                <div>
+                  <div className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{t('payments.received_by')}</div>
+                  <div className="text-sm font-semibold text-gray-900">{viewPayment.received_by || '—'}</div>
+                </div>
               </div>
               {viewPayment.notes && (
                 <div className="pt-4 border-t border-gray-100">
@@ -988,6 +1223,11 @@ const Payments = () => {
             <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50/50">
               <span className="text-xs text-gray-400">{t('payments.receipt_no')} {viewPayment.receipt_number || 'N/A'}</span>
               <div className="flex flex-wrap gap-2">
+                <button onClick={() => { const p = viewPayment; setViewPayment(null); setTimeout(() => handleEdit(p), 100); }}
+                  className="flex items-center space-x-1.5 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium transition-all">
+                  <Pencil className="w-4 h-4" />
+                  <span>{t('payments.edit')}</span>
+                </button>
                 <button onClick={() => printReceipt(viewPayment)}
                   className="flex items-center space-x-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-all">
                   <Printer className="w-4 h-4" />
@@ -999,6 +1239,65 @@ const Payments = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {partialPayment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">{t('payments.add_payment')}</h2>
+              <button onClick={() => setPartialPayment(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!partialAmount || parseFloat(partialAmount) <= 0) return;
+              setSavingPartial(true);
+              try {
+                const res = await paymentService.addPayment(partialPayment.id, { additional_amount: partialAmount });
+                const updatedPayment = res.data;
+                const updated = await paymentService.getAll();
+                setPayments(updated.data.results || updated.data);
+                setPartialPayment(null);
+                setPartialAmount('');
+                setTimeout(() => printReceipt(updatedPayment, partialAmount), 300);
+              } catch (err) {
+                console.error('Add payment error:', err);
+                const detail = err.response?.data?.error || err.response?.data?.detail;
+                const status = err.response?.status ? `(${err.response.status})` : '';
+                const msg = detail || (err.response?.data ? JSON.stringify(err.response.data) : null) || `Erreur${status}: ${err.message}`;
+                showModal('error', t('common.error'), msg);
+              } finally {
+                setSavingPartial(false);
+              }
+            }} className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                {t('payments.student')}: <strong>{partialPayment.student}</strong><br />
+                {t('payments.fee')}: <strong>{partialPayment.fee_type}</strong><br />
+                {t('payments.total')}: <strong>{Number(partialPayment.total_amount).toLocaleString()} FG</strong><br />
+                {t('payments.already_paid')}: <strong>{Number(partialPayment.amount_paid).toLocaleString()} FG</strong><br />
+                {t('payments.remaining')}: <strong>{Number(partialPayment.total_amount - partialPayment.amount_paid).toLocaleString()} FG</strong>
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('payments.additional_amount')}</label>
+                <input type="number" step="0.01" min="0" required
+                  value={partialAmount} onChange={e => setPartialAmount(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" disabled={savingPartial}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium transition-all">
+                  {savingPartial ? '...' : t('payments.update')}
+                </button>
+                <button type="button" onClick={() => setPartialPayment(null)}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium transition-all">
+                  {t('payments.cancel')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

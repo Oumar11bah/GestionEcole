@@ -26,6 +26,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.conf import settings
 from accounts.permissions import CanManageStudents, CanExportData
+from accounts.utils import TenantAwareMixin, get_request_tenant
 
 from .models import Student, Parent
 from .serializers import StudentSerializer, ParentSerializer
@@ -288,17 +289,21 @@ def draw_card_back(c, student, card_w, card_h, x_offset=0, y_offset=0):
     c.restoreState()
 
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Student.objects.all().order_by('last_name', 'first_name')
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticated, CanManageStudents]
 
     def get_queryset(self):
-        queryset = Student.objects.all().order_by('last_name', 'first_name')
-        class_id = self.request.query_params.get('class_id', None)
-        if class_id and class_id.isdigit():
-            queryset = queryset.filter(class_assigned_id=class_id)
+        queryset = super().get_queryset()
+        if hasattr(self, 'request'):
+            class_id = self.request.query_params.get('class_id', None)
+            if class_id and class_id.isdigit():
+                queryset = queryset.filter(class_assigned_id=class_id)
         return queryset
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -354,6 +359,51 @@ class StudentViewSet(viewsets.ModelViewSet):
             'academic_year': student.academic_year or '2024-2025',
         })
         return HttpResponse(html)
+
+    @action(detail=False, methods=['get'])
+    def cards_pdf(self, request):
+        students = self.get_queryset()
+        class_id = request.query_params.get('class_id', None)
+        cycle = request.query_params.get('cycle', None)
+        status = request.query_params.get('status', None)
+        if class_id and class_id.isdigit():
+            students = students.filter(class_assigned_id=class_id)
+        if status:
+            students = students.filter(status=status)
+        if cycle:
+            students = students.filter(class_assigned__cycle__name=cycle)
+        students = students.order_by('last_name', 'first_name')
+
+        CARD_W = 95*mm
+        CARD_H = 58*mm
+        GAP_X = 8*mm
+        GAP_Y = 8*mm
+        page_w, page_h = A4
+        margin_x = (page_w - 2 * CARD_W - GAP_X) / 2
+
+        front_positions = []
+        back_positions = []
+        for row in range(4):
+            y = page_h - 5*mm - CARD_H - row * (CARD_H + GAP_Y)
+            front_positions.append((margin_x, y))
+            back_positions.append((margin_x + CARD_W + GAP_X, y))
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        for i, student in enumerate(students):
+            if i > 0 and i % 4 == 0:
+                c.showPage()
+            row = i % 4
+            draw_student_card(c, student, CARD_W, CARD_H, front_positions[row][0], front_positions[row][1])
+            draw_card_back(c, student, CARD_W, CARD_H, back_positions[row][0], back_positions[row][1])
+        if students:
+            c.showPage()
+        c.save()
+        buffer.seek(0)
+
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="cartes_eleves.pdf"'
+        return response
 
     @action(detail=False, methods=['get'])
     def list_pdf(self, request):
@@ -427,7 +477,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = 'attachment; filename="liste_eleves.pdf"'
         return response
 
-class ParentViewSet(viewsets.ModelViewSet):
+class ParentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Parent.objects.all().order_by('full_name')
     serializer_class = ParentSerializer
     permission_classes = [IsAuthenticated, CanManageStudents]

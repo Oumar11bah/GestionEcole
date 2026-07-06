@@ -13,9 +13,24 @@ export const applyThemeColors = (primary, secondary) => {
 
 export const loadSchoolTheme = async () => {
   try {
-    const res = await schoolService.get();
-    if (res.data) {
-      applyThemeColors(res.data.primary_color, res.data.secondary_color);
+    const stored = localStorage.getItem('edumanager_user');
+    let primary, secondary;
+    if (stored) {
+      const user = JSON.parse(stored);
+      if (user?.profile?.primary_color && user?.profile?.secondary_color) {
+        primary = user.profile.primary_color;
+        secondary = user.profile.secondary_color;
+      }
+    }
+    if (!primary) {
+      const res = await schoolService.get();
+      if (res.data) {
+        primary = res.data.primary_color;
+        secondary = res.data.secondary_color;
+      }
+    }
+    if (primary) {
+      applyThemeColors(primary, secondary);
     }
   } catch {}
 };
@@ -31,8 +46,8 @@ function darkenColor(hex, percent) {
 function lightenColor(hex, percent) {
   const num = parseInt(hex.slice(1), 16);
   const r = Math.min(255, (num >> 16) + Math.round((255 - (num >> 16)) * percent / 100));
-  const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round((255 - ((num >> 8) & 0x00FF)) * percent / 100));
-  const b = Math.min(255, (num & 0x0000FF) + Math.round((255 - (num & 0x0000FF)) * percent / 100));
+  const g = Math.min(255, ((num >> 8) & 0x00FF) + Math.round(((255 - (num >> 8)) & 0x00FF) * percent / 100));
+  const b = Math.min(255, (num & 0x0000FF) + Math.round(((255 - (num & 0x0000FF))) * percent / 100));
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 

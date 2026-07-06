@@ -1,6 +1,7 @@
 from django.db import models
 from students.models import Student
 from django.contrib.auth.models import User
+from tenants.models import Tenant
 
 class FeeType(models.Model):
     name = models.CharField(max_length=100)
@@ -12,6 +13,7 @@ class FeeType(models.Model):
         ('lycee', 'Lycée'),
         ('all', 'Tous'),
     ], default='all')
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -44,8 +46,9 @@ class Payment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     reference = models.CharField(max_length=100, blank=True)
     received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='received_payments')
-    receipt_number = models.CharField(max_length=50, unique=True)
+    receipt_number = models.CharField(max_length=50)
     notes = models.TextField(blank=True)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -64,3 +67,14 @@ class Payment(models.Model):
             else:
                 self.status = 'pending'
         super().save(*args, **kwargs)
+
+class PaymentHistory(models.Model):
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='history')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateField()
+    received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.payment} - +{self.amount} FG"

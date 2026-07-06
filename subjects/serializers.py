@@ -11,7 +11,7 @@ class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subject
         fields = ['id', 'name', 'code', 'description', 'coefficient', 'cycle', 'cycle_details',
-                  'color', 'subject_type', 'specialty', 'teacher', 'created_at']
+                  'color', 'subject_type', 'specialty', 'teacher', 'tenant', 'created_at']
 
     def create(self, validated_data):
         cycles = validated_data.pop('cycle', [])
@@ -39,7 +39,7 @@ class TeacherSubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherSubject
         fields = ['id', 'teacher', 'teacher_id', 'subject', 'subject_id', 'subject_name',
-                  'class_assigned', 'class_assigned_id', 'class_name', 'academic_year', 'created_at']
+                  'class_assigned', 'class_assigned_id', 'class_name', 'academic_year', 'tenant', 'created_at']
 
     def create(self, validated_data):
         validated_data['teacher'] = Teacher.objects.get(id=validated_data.pop('teacher_id'))
