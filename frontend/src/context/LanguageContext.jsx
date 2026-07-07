@@ -1,20 +1,23 @@
-import { createContext, useContext, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import { createContext, useContext, useEffect, useCallback, useRef } from 'react';
+import i18n from '../i18n';
 import { useAuth } from './AuthContext';
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const { i18n } = useTranslation();
   const { user } = useAuth();
+  const userRef = useRef(user);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const changeLanguage = useCallback((lng) => {
     i18n.changeLanguage(lng);
-    // Only persist to localStorage for super_admin so login page keeps his language
-    if (user?.profile?.role === 'super_admin') {
+    if (userRef.current?.profile?.role === 'super_admin') {
       localStorage.setItem('i18nextLng', lng);
     }
-  }, [i18n, user]);
+  }, []);
 
   useEffect(() => {
     if (user?.profile?.language) {
@@ -24,7 +27,7 @@ export const LanguageProvider = ({ children }) => {
         localStorage.setItem('i18nextLng', lang);
       }
     }
-  }, [user?.profile?.language, user?.profile?.role, i18n]);
+  }, [user?.profile?.language, user?.profile?.role]);
 
   return (
     <LanguageContext.Provider value={{ changeLanguage }}>
