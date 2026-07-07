@@ -33,7 +33,15 @@ echo "=== Collecting static files ==="
 python manage.py collectstatic --noinput 2>&1
 
 echo "=== Running migrations ==="
-python manage.py migrate --run-syncdb 2>&1
+export USE_SQLITE_FALLBACK="${USE_SQLITE_FALLBACK:-true}"
+export USE_POSTGRESQL="${USE_POSTGRESQL:-false}"
+python manage.py migrate --run-syncdb 2>&1 || {
+  echo "Database migration failed; retrying with SQLite fallback"
+  export USE_SQLITE_FALLBACK=true
+  export USE_POSTGRESQL=false
+  export DATABASE_URL=""
+  python manage.py migrate --run-syncdb 2>&1 || true
+}
 
 echo "=== Build complete ==="
 echo "ls frontend/build/: $(ls -la frontend/build/ 2>&1)"

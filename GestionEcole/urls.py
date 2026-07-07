@@ -9,6 +9,7 @@ from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.views.static import serve as static_serve
 from accounts.media_serving import serve_protected_file
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -33,7 +34,7 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
+    urlpatterns += staticfiles_urlpatterns()
 REACT_STATIC_ROOT = os.path.join(settings.BASE_DIR, 'frontend', 'build', 'static')
 if os.path.isdir(REACT_STATIC_ROOT):
     urlpatterns += [

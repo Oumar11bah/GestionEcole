@@ -99,10 +99,16 @@ WSGI_APPLICATION = 'GestionEcole.wsgi.application'
 
 # Database
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    import dj_database_url
-    DATABASES = {'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
-elif os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true':
+USE_SQLITE_FALLBACK = os.environ.get('USE_SQLITE_FALLBACK', 'false').lower() == 'true'
+
+if USE_SQLITE_FALLBACK:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif DATABASE_URL and os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -113,6 +119,8 @@ elif os.environ.get('USE_POSTGRESQL', 'false').lower() == 'true':
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
+elif DATABASE_URL:
+    DATABASES = {'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)}
 else:
     DATABASES = {
         'default': {

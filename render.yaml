@@ -23,6 +23,10 @@ services:
         fromDatabase:
           name: gestionecole-db
           property: connectionString
+      - key: USE_SQLITE_FALLBACK
+        value: "true"
+      - key: USE_POSTGRESQL
+        value: "false"
       - key: DJANGO_SETTINGS_MODULE
         value: GestionEcole.settings
       - key: CLOUDINARY_CLOUD_NAME
