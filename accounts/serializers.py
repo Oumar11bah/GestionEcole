@@ -266,6 +266,8 @@ class RoleSerializer(serializers.ModelSerializer):
         return obj.display_name
 
     def validate_name(self, value):
+        if value.lower().replace(' ', '_') == 'super_admin':
+            raise serializers.ValidationError("Le rôle super_admin ne peut pas être créé")
         from .models import Role
         request = self.context.get('request')
         if request and hasattr(request, 'user'):

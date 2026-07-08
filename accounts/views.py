@@ -860,10 +860,14 @@ class RoleViewSet(viewsets.ModelViewSet):
             return Role.objects.all().order_by('name')
         tenant = get_request_tenant(self.request)
         if tenant:
-            return Role.objects.filter(
+            qs = Role.objects.filter(
                 models.Q(tenant=tenant) | models.Q(tenant__isnull=True)
-            ).order_by('name')
-        return Role.objects.filter(tenant__isnull=True).order_by('name')
+            )
+        else:
+            qs = Role.objects.filter(tenant__isnull=True)
+        # Hide system-level super_admin and secretaire from non-super-admin users
+        qs = qs.exclude(name__in=['super_admin', 'secretaire'], is_system=True)
+        return qs.order_by('name')
 
     def perform_create(self, serializer):
         user = self.request.user

@@ -580,6 +580,7 @@
   "roleManagement.technicalNamePlaceholder": "e.g. assistant",
   "roleManagement.title": "Permission Management",
   "roleManagement.userCount": "{{count}} user(s)",
+  "roleManagement.cannotCreateSuperAdmin": "Cannot create Super Admin role",
   "search.absenceReport": "Absence Report",
   "search.academicResults": "Academic Results",
   "search.academicYear": "Academic Year",

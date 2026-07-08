@@ -143,9 +143,14 @@ const RoleManagement = () => {
       toast.error(t('roleManagement.nameAndLabelRequired'));
       return;
     }
+    const normalizedName = newRole.name.trim().toLowerCase().replace(/\s+/g, '_');
+    if (normalizedName === 'super_admin') {
+      toast.error(t('roleManagement.cannotCreateSuperAdmin'));
+      return;
+    }
     try {
       await api.post('/accounts/roles/', {
-        name: newRole.name.trim().toLowerCase().replace(/\s+/g, '_'),
+        name: normalizedName,
         display_name: newRole.display_name.trim(),
         permissions: newRole.permissions,
       });
@@ -202,6 +207,9 @@ const RoleManagement = () => {
   };
 
   const isSuperAdmin = currentUser?.profile?.role === 'super_admin';
+  const visibleRoles = isSuperAdmin
+    ? roles
+    : roles.filter(r => r.name !== 'super_admin' && !(r.name === 'secretaire' && r.is_system));
 
   if (loading) {
     return (
@@ -290,7 +298,7 @@ const RoleManagement = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {roles.map((role) => (
+        {visibleRoles.map((role) => (
           <div key={role.name} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <div className="flex items-center space-x-3">
