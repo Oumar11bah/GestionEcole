@@ -353,6 +353,7 @@ export const tenantService = {
   toggleActivation: (id) => api.post(`/tenants/tenants/${id}/toggle_activation/`),
   approve: (id) => api.post(`/tenants/tenants/${id}/approve/`),
   checkLicense: (id) => api.get(`/tenants/tenants/${id}/check_license/`),
+  resetAdminPassword: (id) => api.post(`/tenants/tenants/${id}/reset_admin_password/`),
   checkSubdomain: (name) => api.get('/tenants/tenants/check_subdomain/', { params: { name } }),
 };
 

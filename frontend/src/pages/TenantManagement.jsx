@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tenantService } from '../services/api';
+import toast from '../utils/toast';
 import {
   Search, Check, X, ChevronDown, ChevronUp,
   Building, Mail, Phone, Users, UserCheck, AlertTriangle,
@@ -302,12 +303,22 @@ const EditTenantModal = ({ open, tenant, onClose, onUpdated }) => {
 const TenantCard = ({ tenant, onToggle, onApprove, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const [license, setLicense] = useState(null);
+  const [newPassword, setNewPassword] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const loadLicense = async () => {
     try {
       const { data } = await tenantService.checkLicense(tenant.id);
       setLicense(data);
     } catch { }
+  };
+
+  const handleResetPassword = async () => {
+    setConfirmReset(false);
+    try {
+      const { data } = await tenantService.resetAdminPassword(tenant.id);
+      setNewPassword(data.new_password);
+    } catch { toast.error('Erreur lors de la réinitialisation du mot de passe'); }
   };
 
   useEffect(() => { if (expanded) loadLicense(); }, [expanded]);
@@ -409,11 +420,34 @@ const TenantCard = ({ tenant, onToggle, onApprove, onEdit, onDelete }) => {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               <span>Supprimer</span>
             </button>
-            <button onClick={loadLicense}
-              className="flex items-center space-x-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
-              <RefreshCw className="w-4 h-4" />
-              <span>Rafraîchir</span>
+            <button onClick={() => setConfirmReset(true)}
+              className="flex items-center space-x-1.5 px-4 py-2 text-sm font-medium rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition">
+              <Key className="w-4 h-4" />
+              <span>Réinitialiser le mot de passe</span>
             </button>
+            {newPassword && (
+              <div className="w-full bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                Nouveau mot de passe : <strong className="font-mono bg-green-100 px-2 py-0.5 rounded">{newPassword}</strong>
+                <button onClick={() => setNewPassword(null)} className="ml-2 text-green-600 hover:text-green-800">
+                  <X className="w-4 h-4 inline" />
+                </button>
+              </div>
+            )}
+            {confirmReset && (
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                <p className="text-sm text-amber-800 font-medium">Réinitialiser le mot de passe de l'administrateur ?</p>
+                <div className="flex space-x-2">
+                  <button onClick={handleResetPassword}
+                    className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition">
+                    Confirmer
+                  </button>
+                  <button onClick={() => setConfirmReset(false)}
+                    className="px-4 py-2 border border-gray-200 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-50 transition">
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

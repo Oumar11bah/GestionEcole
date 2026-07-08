@@ -1,3 +1,5 @@
+import secrets
+import string
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -148,3 +150,15 @@ class TenantViewSet(viewsets.ModelViewSet):
         tenant.is_active = True
         tenant.save(update_fields=['is_pending', 'is_active'])
         return Response(TenantSerializer(tenant).data)
+
+    @action(detail=True, methods=['post'])
+    def reset_admin_password(self, request, pk=None):
+        tenant = self.get_object()
+        admin = User.objects.filter(profile__tenant=tenant, profile__role='admin').first()
+        if not admin:
+            return Response({'error': "Aucun administrateur trouvé pour cet établissement"}, status=status.HTTP_404_NOT_FOUND)
+        alphabet = string.ascii_letters + string.digits
+        new_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+        admin.set_password(new_password)
+        admin.save()
+        return Response({'new_password': new_password, 'message': 'Mot de passe réinitialisé avec succès'})

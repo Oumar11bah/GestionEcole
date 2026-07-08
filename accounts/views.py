@@ -450,6 +450,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 'user': UserSerializer(user).data,
                 'profile': UserProfileSerializer(profile, context={'request': request}).data,
                 'message': 'Utilisateur créé avec succès',
+                'generated_password': password,
             }, status=status.HTTP_201_CREATED)
 
         except IntegrityError:
