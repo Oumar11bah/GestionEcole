@@ -50,6 +50,8 @@ class TenantViewSet(viewsets.ModelViewSet):
         admin_last_name = self.request.data.get('admin_last_name', '')
 
         if admin_username and admin_password:
+            if User.objects.filter(username=admin_username).exists():
+                return
             from django.contrib.auth.models import User
             admin_user = User.objects.create_user(
                 username=admin_username,
@@ -72,6 +74,13 @@ class TenantViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
+
+        if User.objects.filter(username=data['admin_username']).exists():
+            return Response(
+                {'admin_username': ["Ce nom d'utilisateur est déjà pris."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         subdomain = _generate_subdomain(data['school_name'])
         license_key = _generate_license_key()
 
