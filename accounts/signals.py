@@ -9,18 +9,26 @@ from communication.models import Notification
 def notify_admins_on_activity(sender, instance, created, **kwargs):
     if not created:
         return
-    admins = User.objects.filter(
-        profile__role__in=['super_admin', 'admin'],
-        is_active=True
-    )
-    if not admins.exists():
+    if not instance.user or not hasattr(instance.user, 'profile'):
         return
-    notifications = []
-    for admin in admins:
-        notifications.append(Notification(
-            recipient=admin,
+    creator = instance.user.profile.created_by
+    if creator:
+        Notification.objects.create(
+            recipient=creator,
             notification_type='general',
             title=f"Activité: {instance.get_action_display()}",
             message=f"{instance.username} - {instance.module}: {instance.description}",
-        ))
-    Notification.objects.bulk_create(notifications)
+        )
+    elif instance.user.is_superuser:
+        recipients = User.objects.filter(is_superuser=True, is_active=True)
+        notifications = []
+        for recipient in recipients:
+            if recipient != instance.user:
+                notifications.append(Notification(
+                    recipient=recipient,
+                    notification_type='general',
+                    title=f"Activité: {instance.get_action_display()}",
+                    message=f"{instance.username} - {instance.module}: {instance.description}",
+                ))
+        if notifications:
+            Notification.objects.bulk_create(notifications)

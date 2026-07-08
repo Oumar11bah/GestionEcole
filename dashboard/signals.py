@@ -82,21 +82,29 @@ def log_model_delete(sender, instance, **kwargs):
 def notify_admins_on_dashboard_activity(sender, instance, created, **kwargs):
     if not created:
         return
-    from django.contrib.auth.models import User
-    from communication.models import Notification
-    admins = User.objects.filter(
-        profile__role__in=['super_admin', 'admin'],
-        is_active=True
-    )
-    if not admins.exists():
+    if not instance.user or not hasattr(instance.user, 'profile'):
         return
-    notifications = []
+    from communication.models import Notification
+    creator = instance.user.profile.created_by
     action_display = dict(instance.ACTION_CHOICES).get(instance.action, instance.action)
-    for admin in admins:
-        notifications.append(Notification(
-            recipient=admin,
+    if creator:
+        Notification.objects.create(
+            recipient=creator,
             notification_type='general',
             title=f"{action_display}: {instance.model_name}",
             message=f"{instance.user.get_full_name() or instance.user.username} - {instance.object_repr}",
-        ))
-    Notification.objects.bulk_create(notifications)
+        )
+    elif instance.user.is_superuser:
+        from django.contrib.auth.models import User
+        recipients = User.objects.filter(is_superuser=True, is_active=True)
+        notifications = []
+        for recipient in recipients:
+            if recipient != instance.user:
+                notifications.append(Notification(
+                    recipient=recipient,
+                    notification_type='general',
+                    title=f"{action_display}: {instance.model_name}",
+                    message=f"{instance.user.get_full_name() or instance.user.username} - {instance.object_repr}",
+                ))
+        if notifications:
+            Notification.objects.bulk_create(notifications)

@@ -244,7 +244,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 role_display = Role.get_or_default(user.profile.role).display_name if hasattr(user, 'profile') else ''
                 notify_admins('login',
                     f"{user.get_full_name() or user.username} ({role_display}) s'est connecté",
-                    f"Connexion de {user.get_full_name() or user.username} ({role_display})")
+                    f"Connexion de {user.get_full_name() or user.username} ({role_display})",
+                    trigger_user=user)
             return response
 
         # --- Login failed ---
@@ -277,7 +278,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 from .notifications import notify_admins
                 notify_admins('security',
                     f"🔒 Compte bloqué : {user.get_full_name() or user.username}",
-                    f"Le compte {user.username} a été automatiquement bloqué après {attempts} tentatives échouées depuis {ip_address}.")
+                    f"Le compte {user.username} a été automatiquement bloqué après {attempts} tentatives échouées depuis {ip_address}.",
+                    trigger_user=user)
                 school_info = SchoolInfo.objects.first()
                 return Response({
                     'error': 'Compte bloqué après plusieurs tentatives échouées',
@@ -609,7 +611,8 @@ class UserViewSet(viewsets.ModelViewSet):
         role_display = Role.get_or_default(request.user.profile.role).display_name if hasattr(request.user, 'profile') else ''
         notify_admins('logout',
             f"{request.user.get_full_name() or request.user.username} ({role_display}) s'est déconnecté",
-            f"Déconnexion de {request.user.get_full_name() or request.user.username} ({role_display})")
+            f"Déconnexion de {request.user.get_full_name() or request.user.username} ({role_display})",
+            trigger_user=request.user)
         return Response({'message': 'Déconnecté avec succès'})
 
     @action(detail=False, methods=['get'])
@@ -691,7 +694,8 @@ class UserViewSet(viewsets.ModelViewSet):
         from .notifications import notify_admins
         notify_admins('security',
             f"🔓 Compte débloqué : {user.get_full_name() or user.username}",
-            f"Le compte {user.username} a été débloqué par {request.user.get_full_name() or request.user.username}.")
+            f"Le compte {user.username} a été débloqué par {request.user.get_full_name() or request.user.username}.",
+            trigger_user=user)
 
         profile = UserProfile.objects.get(user=user)
         return Response({
