@@ -64,6 +64,13 @@ const Login = () => {
     nom: '', prenom: '', username: '', password: '', confirmPassword: ''
   });
   const [adminSuccess, setAdminSuccess] = useState('');
+  const [hasSuperAdmin, setHasSuperAdmin] = useState(false);
+
+  React.useEffect(() => {
+    authService.loginState('').then(res => {
+      if (res.data.has_super_admin) setHasSuperAdmin(true);
+    }).catch(() => {});
+  }, []);
 
   const [securityState, setSecurityState] = useState({
     locked: false, lockoutSeconds: 0, blocked: false,
@@ -146,6 +153,7 @@ const Login = () => {
       });
       setAdminSuccess(response.data.message || t('login.adminCreated'));
       setToast({ message: t('login.adminCreated'), type: 'success' });
+      setHasSuperAdmin(true);
       setAdminData({ nom: '', prenom: '', username: '', password: '', confirmPassword: '' });
     } catch (err) {
       setError(err.response?.data?.error || t('login.adminCreateError'));
@@ -434,7 +442,7 @@ const Login = () => {
                 </form>
 
                 <div className="mt-6 pt-5 border-t border-gray-100/80 space-y-3">
-                  {!securityState.blocked && (
+                  {!securityState.blocked && !hasSuperAdmin && (
                     <div className="text-center">
                       <button type="button" onClick={() => { setShowAdminForm(true); setError(''); }}
                         className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors hover:underline underline-offset-2">

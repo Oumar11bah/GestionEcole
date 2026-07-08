@@ -60,7 +60,7 @@ def setup_admin(request):
             last_name=last_name or '',
         )
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        profile.role = 'admin'
+        profile.role = 'super_admin'
         profile.save()
 
         return Response({
@@ -113,8 +113,9 @@ class LoginRateThrottle(AnonRateThrottle):
 @permission_classes([AllowAny])
 def login_state(request):
     username = request.query_params.get('username', '')
+    has_super_admin = User.objects.filter(is_superuser=True).exists()
     if not username:
-        return Response({'state': 'clean'})
+        return Response({'state': 'clean', 'has_super_admin': has_super_admin})
 
     try:
         user = User.objects.get(username=username)
