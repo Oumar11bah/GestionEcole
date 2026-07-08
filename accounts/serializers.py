@@ -190,6 +190,12 @@ class LoginAttemptSerializer(serializers.ModelSerializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def _get_super_admin_contact(self):
+        sa = User.objects.filter(is_superuser=True, is_active=True).first()
+        if sa and hasattr(sa, 'profile'):
+            return sa.profile.phone_number or '', sa.email or ''
+        return '', ''
+
     def validate(self, attrs):
         try:
             data = super().validate(attrs)
@@ -198,7 +204,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         profile = getattr(self.user, 'profile', None)
         if profile and profile.tenant:
             if not profile.tenant.is_active:
-                raise AuthenticationFailed("Votre établissement a été désactivé. Veuillez contacter le super admin.")
+                phone, email = self._get_super_admin_contact()
+                contact = ''
+                if phone and email:
+                    contact = f" Tél: {phone}, Email: {email}"
+                elif phone:
+                    contact = f" Tél: {phone}"
+                elif email:
+                    contact = f" Email: {email}"
+                raise AuthenticationFailed(
+                    "Votre établissement a été désactivé. Veuillez contacter le super admin." + contact)
             if profile.tenant.is_pending:
                 raise AuthenticationFailed("Votre compte est en attente d'activation.")
         data['user'] = UserSerializer(self.user).data
