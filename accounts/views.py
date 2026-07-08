@@ -415,6 +415,10 @@ class UserViewSet(viewsets.ModelViewSet):
             if creator_profile and creator_profile.tenant:
                 target_tenant = creator_profile.tenant
 
+        role = serializer.validated_data['role']
+        if creator_role == 'super_admin' and role != 'super_admin' and not target_tenant:
+            return Response({'error': "L'établissement est requis pour cet utilisateur"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             user = User.objects.create_user(
                 username=serializer.validated_data['username'],
