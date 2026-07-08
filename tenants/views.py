@@ -52,7 +52,6 @@ class TenantViewSet(viewsets.ModelViewSet):
         if admin_username and admin_password:
             if User.objects.filter(username=admin_username).exists():
                 return
-            from django.contrib.auth.models import User
             admin_user = User.objects.create_user(
                 username=admin_username,
                 email=admin_email,
