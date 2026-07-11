@@ -82,13 +82,26 @@ class DashboardViewSet(viewsets.ViewSet):
             return Response(data)
 
         # Filter by tenant for non-super-admin users
-        tenant_filter = {}
+        tenant = None
         if hasattr(request.user, 'profile') and request.user.profile.tenant:
-            tenant_filter = {'tenant': request.user.profile.tenant}
+            tenant = request.user.profile.tenant
+        if not tenant:
+            return Response({
+                'total_students': 0,
+                'total_teachers': 0,
+                'total_payments': 0,
+                'total_classes': 0,
+                'students_by_cycle': {},
+                'recent_activities': [],
+                'enrollment_trend': [],
+                'cycle_distribution': [],
+                'success_rate': 0,
+            })
+        tenant_filter = {'tenant': tenant}
 
         total_students = Student.objects.filter(**tenant_filter).count()
         total_teachers = Teacher.objects.filter(is_active=True, **tenant_filter).count()
-        total_payments = Payment.objects.filter(status='completed', **tenant_filter).aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+        total_payments = Payment.objects.filter(status__in=['completed', 'partial'], **tenant_filter).aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
         total_classes = Class.objects.filter(**tenant_filter).count()
 
         students_by_cycle = {}

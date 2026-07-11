@@ -728,6 +728,13 @@ const Payments = () => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {anyPartial && (
+                              <button onClick={(e) => { e.stopPropagation(); const pp = group.payments.find(p => p.status === 'partial' || p.status === 'pending'); if (pp) setPartialPayment(pp); }}
+                                className="w-8 h-8 flex items-center justify-center text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 hover:border-green-300 transition-all"
+                                title={t('payments.add_payment')}>
+                                <DollarSign className="w-4 h-4" />
+                              </button>
+                            )}
                             <button onClick={(e) => { e.stopPropagation(); setViewPayment(group.payments[0]); }}
                               className="w-8 h-8 flex items-center justify-center text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all"
                               title={t('payments.view_details')}>
@@ -783,6 +790,13 @@ const Payments = () => {
                             </td>
                             <td className="px-4 py-2.5 text-right">
                               <div className="flex items-center justify-end gap-1">
+                                {(payment.status === 'partial' || payment.status === 'pending') && (
+                                  <button onClick={(e) => { e.stopPropagation(); setPartialPayment(payment); }}
+                                    className="w-7 h-7 flex items-center justify-center text-green-600 bg-green-50 border border-green-200 rounded hover:bg-green-100 transition-all"
+                                    title={t('payments.add_payment')}>
+                                    <DollarSign className="w-3 h-3" />
+                                  </button>
+                                )}
                                 <button onClick={(e) => { e.stopPropagation(); setViewPayment(payment); }}
                                   className="w-7 h-7 flex items-center justify-center text-blue-500 bg-white border border-blue-200 rounded hover:bg-blue-50 transition-all"
                                   title={t('payments.view_details')}>
@@ -1123,6 +1137,12 @@ const Payments = () => {
                 <span>{t('payments.payment_details')}</span>
               </h2>
               <div className="flex flex-wrap items-center gap-2">
+                {(viewPayment.status === 'partial' || viewPayment.status === 'pending') && (
+                  <button onClick={() => { setPartialPayment(viewPayment); setViewPayment(null); }}
+                    className="p-2 hover:bg-green-50 rounded-lg text-green-600 transition-colors" title={t('payments.add_payment')}>
+                    <DollarSign className="w-4 h-4" />
+                  </button>
+                )}
                 <button onClick={() => { const p = viewPayment; setViewPayment(null); setTimeout(() => handleEdit(p), 100); }}
                   className="p-2 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors" title={t('payments.edit_payment')}>
                   <Pencil className="w-4 h-4" />
@@ -1223,6 +1243,13 @@ const Payments = () => {
             <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50/50">
               <span className="text-xs text-gray-400">{t('payments.receipt_no')} {viewPayment.receipt_number || 'N/A'}</span>
               <div className="flex flex-wrap gap-2">
+                {(viewPayment.status === 'partial' || viewPayment.status === 'pending') && (
+                  <button onClick={() => { setPartialPayment(viewPayment); setViewPayment(null); }}
+                    className="flex items-center space-x-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-all">
+                    <DollarSign className="w-4 h-4" />
+                    <span>{t('payments.add_payment')}</span>
+                  </button>
+                )}
                 <button onClick={() => { const p = viewPayment; setViewPayment(null); setTimeout(() => handleEdit(p), 100); }}
                   className="flex items-center space-x-1.5 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium transition-all">
                   <Pencil className="w-4 h-4" />

@@ -66,7 +66,7 @@ class PaymentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     def student_balance(self, request):
         student_id = request.query_params.get('student_id')
         if student_id:
-            payments = Payment.objects.filter(student_id=student_id, status='completed')
+            payments = Payment.objects.filter(student_id=student_id, status__in=['completed', 'partial'])
             total_paid = sum(p.amount_paid for p in payments)
             return Response({'total_paid': total_paid})
         return Response({'error': 'student_id required'}, status=400)

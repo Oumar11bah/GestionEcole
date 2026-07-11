@@ -1,5 +1,6 @@
 import json
 import requests
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -47,8 +48,11 @@ class MobilePaymentProviderViewSet(viewsets.ModelViewSet):
             student=student,
             fee_type=fee_type,
             amount_paid=amount,
+            total_amount=fee_type.amount,
             payment_method='mobile_money',
+            payment_date=timezone.now().date(),
             status='pending',
+            tenant=student.tenant,
             received_by=request.user if request.user.is_authenticated else None,
         )
         
