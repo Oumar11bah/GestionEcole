@@ -48,7 +48,7 @@ class Class(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('name', 'cycle', 'specialty', 'academic_year')
+        unique_together = ('name', 'cycle', 'specialty', 'academic_year', 'tenant')
 
     @property
     def display_name(self):

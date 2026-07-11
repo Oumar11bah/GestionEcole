@@ -29,8 +29,9 @@ class ClassSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         cycle_name = validated_data.pop('cycle_name', None)
+        tenant = validated_data.get('tenant')
         if cycle_name:
-            validated_data['cycle'], _ = Cycle.objects.get_or_create(name=cycle_name)
+            validated_data['cycle'], _ = Cycle.objects.get_or_create(name=cycle_name, tenant=tenant)
         # Handle specialty
         if 'specialty' in validated_data and validated_data['specialty'] == 'none':
             validated_data['specialty'] = ''
@@ -38,8 +39,9 @@ class ClassSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         cycle_name = validated_data.pop('cycle_name', None)
+        tenant = validated_data.get('tenant', instance.tenant)
         if cycle_name:
-            instance.cycle, _ = Cycle.objects.get_or_create(name=cycle_name)
+            instance.cycle, _ = Cycle.objects.get_or_create(name=cycle_name, tenant=tenant)
         # Handle specialty
         if 'specialty' in validated_data:
             if validated_data['specialty'] == 'none':
