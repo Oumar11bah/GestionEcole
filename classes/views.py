@@ -24,9 +24,12 @@ class CycleViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             return Cycle.objects.none()
         tenant = get_request_tenant(self.request)
         if tenant:
-            return Cycle.objects.filter(
-                models.Q(tenant=tenant) | models.Q(tenant__isnull=True)
-            ).order_by('name')
+            tenant_cycles = Cycle.objects.filter(tenant=tenant)
+            tenant_cycle_names = set(tenant_cycles.values_list('name', flat=True))
+            global_cycles = Cycle.objects.filter(tenant__isnull=True).exclude(
+                name__in=tenant_cycle_names
+            )
+            return (tenant_cycles | global_cycles).order_by('name').distinct()
         return Cycle.objects.filter(tenant__isnull=True).order_by('name')
 
 class ClassViewSet(TenantAwareMixin, viewsets.ModelViewSet):

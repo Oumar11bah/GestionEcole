@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Users, GraduationCap, TrendingUp, Award } from 'lucide-react';
+import { Users, GraduationCap, TrendingUp, Award, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../context/AuthContext';
-import { dashboardService, userService } from '../services/api';
+import { dashboardService, userService, expenseService } from '../services/api';
 import { Trash2, Building, CheckCircle, Clock, XCircle, ArrowRight, Globe } from 'lucide-react';
 import MessageModal from '../components/MessageModal';
 import toast from '../utils/toast';
@@ -25,6 +25,7 @@ const Dashboard = () => {
     total_students: 0,
     total_teachers: 0,
     total_payments: 0,
+    total_expenses: 0,
     total_classes: 0,
     success_rate: 0,
     enrollment_trend: [],
@@ -50,9 +51,12 @@ const Dashboard = () => {
 
   const fetchStats = useCallback(() => {
     dashboardService.getStats()
-      .then((r) => setStats(r.data))
+      .then((r) => setStats(prev => ({ ...prev, ...r.data })))
       .catch(() => {})
       .finally(() => setLoading(false));
+    expenseService.getSummary()
+      .then((r) => setStats(prev => ({ ...prev, total_expenses: r.data.total || 0 })))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -179,7 +183,8 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard icon={Users} label={t('dashboard.students')} value={stats.total_students} delta="" color="blue" />
         <StatCard icon={GraduationCap} label={t('dashboard.teachers')} value={stats.total_teachers} delta="" color="green" />
-        {canAccess('payments') && <StatCard icon={TrendingUp} label={t('dashboard.payments')} value={`${stats.total_payments.toLocaleString()} GNF`} delta="" color="purple" />}
+        {canAccess('payments') && <StatCard icon={TrendingUp} label={t('dashboard.payments')} value={`${stats.total_payments.toLocaleString()} GNF`} delta="" color="green" />}
+        <StatCard icon={TrendingDown} label={t('dashboard.expenses')} value={`${stats.total_expenses.toLocaleString()} GNF`} delta="" color="red" />
         <StatCard icon={Award} label={t('dashboard.successRate')} value={`${stats.success_rate}%`} delta="" color="orange" />
       </div>
 
@@ -276,6 +281,7 @@ const StatCard = ({ icon: Icon, label, value, delta, color }) => {
     green: 'bg-green-50 text-green-600',
     purple: 'bg-purple-50 text-purple-600',
     orange: 'bg-orange-50 text-orange-600',
+    red: 'bg-red-50 text-red-600',
   };
 
   return (

@@ -1,4 +1,4 @@
-# Script pour démarrer les serveurs de développement EduManager
+# Script pour démarrer les serveurs de développement EcolePro GN
 Write-Host "Démarrage des serveurs de développement..." -ForegroundColor Green
 
 # Démarrer le backend Django en arrière-plan

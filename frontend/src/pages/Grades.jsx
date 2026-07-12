@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { Save, Upload, Download, Printer, FileSpreadsheet, Search, X, AlertCircle, CheckCircle, Award, TrendingUp, Star, Ban, Lock, Unlock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { gradeService, classService, teacherSubjectService, studentService, subjectService } from '../services/api';
+import { gradeService, classService, teacherSubjectService, studentService, subjectService, schoolService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { buildSchoolHeaderHTML, buildSchoolHeaderStyles } from '../utils/printHelpers';
 
 const getScoreColor = (score, maxScore) => {
   if (score == null) return 'text-gray-300';
@@ -67,6 +68,7 @@ const Grades = () => {
   const [importing, setImporting] = useState(false);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const tableRef = useRef(null);
+  const [schoolInfo, setSchoolInfo] = useState(null);
 
   const teacherAssignments = user?.teacher_profile?.subject_assignments || [];
   const teacherClassIds = [...new Set(teacherAssignments.map((a) => a.class_assigned_id))];
@@ -94,9 +96,11 @@ const Grades = () => {
     Promise.all([
       classService.getAll(),
       gradeService.getAllTerms(),
-    ]).then(([c, t]) => {
+      schoolService.get().catch(() => ({ data: null })),
+    ]).then(([c, t, s]) => {
       setClasses(c.data.results || c.data);
       setTerms(t.data.results || t.data);
+      setSchoolInfo(s.data);
     });
     if (searchParams.get('action') === 'import') setShowImport(true);
   }, []);
@@ -450,12 +454,13 @@ const Grades = () => {
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #333; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: center; }
-        th { background: #1e3a5f; color: #fff; font-size: 10px; }
+        th { background: ${schoolInfo?.primary_color || '#1e3a5f'}; color: #fff; font-size: 10px; }
         td { font-size: 10px; }
         tr:nth-child(even) { background: #f8fafc; }
-        h2 { text-align: center; color: #1e3a5f; margin: 5px 0; }
+        h2 { text-align: center; color: ${schoolInfo?.primary_color || '#1e3a5f'}; margin: 5px 0; }
         .info { text-align: center; color: #666; font-size: 12px; margin-bottom: 15px; }
       </style></head><body>
+      ${buildSchoolHeaderHTML(schoolInfo)}
       <h2>${t('grades.pdfTitle')}</h2>
       <div class="info">${t('grades.class')}: ${cls?.display_name || cls?.name || ''} | ${t('grades.term')}: ${termName} | ${maxScoreLabel}</div>
       <table><thead><tr>

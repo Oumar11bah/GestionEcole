@@ -1,11 +1,22 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Search, CheckCircle, Clock, XCircle, Eye, Pencil, Trash2, X, Save, DollarSign, CreditCard, Users, Receipt, Printer, AlertCircle, RefreshCw, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { paymentService, studentService, classService } from '../services/api';
+import { Plus, Search, CheckCircle, Clock, XCircle, Eye, Pencil, Trash2, X, Save, DollarSign, CreditCard, Users, Receipt, Printer, AlertCircle, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Wallet, TrendingDown, FileDown } from 'lucide-react';
+import { paymentService, expenseService, studentService, classService, schoolService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import MessageModal from '../components/MessageModal';
 import Label from '../components/Label';
 import { getPreferredAcademicYear, getDefaultAcademicYear } from '../utils/preferences';
+import { buildSchoolHeaderHTML } from '../utils/printHelpers';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
 
 const statusConfig = {
   completed: { icon: CheckCircle, label: 'payments.status.completed', bg: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
@@ -147,6 +158,7 @@ const PaymentHistoryList = ({ onViewPayment, onPrintReceipt }) => {
 
 const Payments = () => {
   const { t } = useTranslation();
+  const { canAccess } = useAuth();
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -178,6 +190,24 @@ const Payments = () => {
   const [partialAmount, setPartialAmount] = useState('');
   const [savingPartial, setSavingPartial] = useState(false);
   const [activeTab, setActiveTab] = useState('payments');
+  const [expenses, setExpenses] = useState([]);
+  const [expenseCategories, setExpenseCategories] = useState([]);
+  const [expenseLoading, setExpenseLoading] = useState(false);
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [filterExpenseCategory, setFilterExpenseCategory] = useState('');
+  const [filterExpenseMonth, setFilterExpenseMonth] = useState('');
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    category: '', description: '', amount: '', expense_date: new Date().toISOString().split('T')[0],
+    payment_method: 'cash', reference: '', notes: '',
+  });
+  const [savingExpense, setSavingExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [schoolInfo, setSchoolInfo] = useState(null);
 
   const showModal = (variant, title, message, onConfirm) => {
     setModal({ open: true, variant, title, message, onConfirm, confirmLabel: onConfirm ? t('payments.confirm') : '' });
@@ -192,14 +222,201 @@ const Payments = () => {
       studentService.getAll(),
       paymentService.getAllFeeTypes(),
       classService.getAll(),
-    ]).then(([p, s, f, c]) => {
+      schoolService.get().catch(() => ({ data: null })),
+    ]).then(([p, s, f, c, sc]) => {
       setPayments(p.data.results || p.data);
       setStudents(s.data.results || s.data);
       setFeeTypes(f.data.results || f.data);
       setClasses(c.data.results || c.data);
+      setSchoolInfo(sc.data);
     }).catch(() => {}).finally(() => setLoading(false));
     if (searchParams.get('action') === 'new') setShowForm(true);
   }, []);
+
+  const fetchExpenses = () => {
+    setExpenseLoading(true);
+    Promise.all([
+      expenseService.getAll(),
+      expenseService.getAllCategories(),
+    ]).then(([e, c]) => {
+      setExpenses(e.data.results || e.data);
+      setExpenseCategories(c.data.results || c.data);
+    }).catch(() => {}).finally(() => setExpenseLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'expenses') fetchExpenses();
+  }, [activeTab]);
+
+  const expenseStats = useMemo(() => {
+    const total = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+    const now = new Date();
+    const monthExpenses = expenses.filter(e => {
+      const d = new Date(e.expense_date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const monthTotal = monthExpenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+    return { total, monthTotal, count: expenses.length };
+  }, [expenses]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      const searchMatch = !expenseSearch || `${e.description} ${e.category_name} ${e.reference}`.toLowerCase().includes(expenseSearch.toLowerCase());
+      const catMatch = !filterExpenseCategory || String(e.category) === filterExpenseCategory;
+      const monthMatch = !filterExpenseMonth || e.expense_date?.startsWith(filterExpenseMonth);
+      return searchMatch && catMatch && monthMatch;
+    });
+  }, [expenses, expenseSearch, filterExpenseCategory, filterExpenseMonth]);
+
+  const handleSaveExpense = async () => {
+    if (!expenseForm.category || !expenseForm.description || !expenseForm.amount || !expenseForm.expense_date) {
+      showModal('warning', t('payments.warning'), t('expenses.fill_required'));
+      return;
+    }
+    setSavingExpense(true);
+    try {
+      const payload = { ...expenseForm, category: parseInt(expenseForm.category, 10), amount: parseFloat(expenseForm.amount) };
+      if (editingExpense) {
+        await expenseService.update(editingExpense.id, payload);
+      } else {
+        await expenseService.create(payload);
+      }
+      const wasEditing = !!editingExpense;
+      setShowExpenseForm(false);
+      setEditingExpense(null);
+      setExpenseForm({ category: '', description: '', amount: '', expense_date: new Date().toISOString().split('T')[0], payment_method: 'cash', reference: '', notes: '' });
+      fetchExpenses();
+      showModal('success', t('payments.success'), wasEditing ? t('expenses.updated') : t('expenses.created'));
+    } catch (err) {
+      const data = err.response?.data;
+      let msg = t('payments.errorSaving');
+      if (data) {
+        if (data.detail) msg = data.detail;
+        else {
+          const fieldErrors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n');
+          if (fieldErrors) msg = fieldErrors;
+        }
+      }
+      showModal('error', t('payments.error'), msg);
+    } finally {
+      setSavingExpense(false);
+    }
+  };
+
+  const handleDeleteExpense = (expense) => {
+    showModal('warning', t('payments.confirmDelete'), t('payments.confirmDeleteMsg'), async () => {
+      try {
+        await expenseService.delete(expense.id);
+        fetchExpenses();
+      } catch (err) {
+        showModal('error', t('payments.error'), t('payments.errorDeleting'));
+      }
+    });
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryForm.name) return;
+    setSavingCategory(true);
+    try {
+      if (editingCategory) {
+        await expenseService.updateCategory(editingCategory.id, categoryForm);
+      } else {
+        await expenseService.createCategory(categoryForm);
+      }
+      const wasEditingCat = !!editingCategory;
+      setShowCategoryModal(false);
+      setEditingCategory(null);
+      setCategoryForm({ name: '', description: '' });
+      const c = await expenseService.getAllCategories();
+      setExpenseCategories(c.data.results || c.data);
+      showModal('success', t('payments.success'), wasEditingCat ? t('expenses.category_updated') : t('expenses.category_created'));
+    } catch (err) {
+      const data = err.response?.data;
+      let msg = t('payments.errorSaving');
+      if (data) {
+        if (data.detail) msg = data.detail;
+        else {
+          const fieldErrors = Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n');
+          if (fieldErrors) msg = fieldErrors;
+        }
+      }
+      showModal('error', t('payments.error'), msg);
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleExportExpensesPDF = () => {
+    if (filteredExpenses.length === 0) {
+      showModal('warning', t('payments.warning'), t('expenses.no_expenses'));
+      return;
+    }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const primaryRGB = schoolInfo?.primary_color ? hexToRgb(schoolInfo.primary_color) : { r: 30, g: 60, b: 159 };
+
+    doc.setFillColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(schoolInfo?.name || '', 14, 12);
+    doc.setFontSize(13);
+    doc.text(t('expenses.title'), 14, 21);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${t('reports.generatedOn')} ${new Date().toLocaleDateString('fr-FR')} ${t('reports.at')} ${new Date().toLocaleTimeString('fr-FR')}`, 14, 25);
+
+    doc.setTextColor(0, 0, 0);
+    let startY = 35;
+
+    const fmt = (n) => Number(n).toLocaleString('fr-FR').replace(/\u00a0/g, ' ').replace(/\u202f/g, ' ');
+
+    const summaryData = [
+      [t('expenses.total_expenses'), `${fmt(expenseStats.total)} GNF`],
+      [t('expenses.this_month'), `${fmt(expenseStats.monthTotal)} GNF`],
+      [t('expenses.total_count'), String(expenseStats.count)],
+    ];
+    autoTable(doc, {
+      startY,
+      head: [[t('reports.indicator'), t('reports.value')]],
+      body: summaryData,
+      theme: 'striped',
+      headStyles: { fillColor: [primaryRGB.r, primaryRGB.g, primaryRGB.b], fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 4 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 80 } },
+      margin: { left: 14, right: 14 },
+    });
+    startY = doc.lastAutoTable.finalY + 10;
+
+    const methodLabels = { cash: t('payments.method.cash'), bank_transfer: t('payments.method.bank_transfer'), mobile_money: t('payments.method.mobile_money'), check: t('payments.method.check') };
+    const rows = filteredExpenses.map(e => [
+      new Date(e.expense_date).toLocaleDateString('fr-FR'),
+      e.category_name || '',
+      e.description,
+      t(methodLabels[e.payment_method] || e.payment_method),
+      e.reference || '—',
+      `${fmt(e.amount)} GNF`,
+    ]);
+    const totalAmount = filteredExpenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+    rows.push([ '', '', '', '', t('expenses.total_expenses'), `${fmt(totalAmount)} GNF` ]);
+
+    autoTable(doc, {
+      startY,
+      head: [[t('expenses.date'), t('expenses.category'), t('expenses.description'), t('expenses.payment_method'), t('expenses.reference'), t('expenses.amount')]],
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: [primaryRGB.r, primaryRGB.g, primaryRGB.b], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`${t('reports.generatedOn')} ${new Date().toLocaleDateString('fr-FR')}`, 14, doc.internal.pageSize.getHeight() - 10);
+
+    doc.save(`rapport_depenses_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   const stats = useMemo(() => {
     const totalCollected = payments.reduce((s, p) => s + parseFloat(p.amount_paid || 0), 0);
@@ -316,6 +533,7 @@ const Payments = () => {
   const handleSaveFeeType = async (e) => {
     e.preventDefault();
     if (!feeTypeForm.name || !feeTypeForm.amount) return;
+    const wasEditing = !!editingFeeType;
     setSavingFeeType(true);
     try {
       const payload = {
@@ -331,8 +549,11 @@ const Payments = () => {
         await paymentService.createFeeType(payload);
       }
       setShowFeeTypeModal(false);
+      setEditingFeeType(null);
+      setFeeTypeForm({ name: '', description: '', amount: '', cycle: 'all', is_active: true });
       const res = await paymentService.getAllFeeTypes();
       setFeeTypes(res.data.results || res.data);
+      showModal('success', t('payments.success'), wasEditing ? t('payments.fee_type_updated') : t('payments.fee_type_created'));
     } catch (error) {
       showModal('error', t('payments.error'), `${t('payments.error')}: ${JSON.stringify(error.response?.data)}`);
     } finally {
@@ -444,6 +665,7 @@ const Payments = () => {
         .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
       </style></head><body>
       <div class="receipt">
+        ${buildSchoolHeaderHTML(schoolInfo).replace('border-bottom:3px solid', 'border-bottom:2px solid').replace('font-family: ', 'font-family: ')}
         <div class="header">
           <h1>${_t('payments.receipt_heading')}</h1>
           <p>${payment.academic_year || ''}</p>
@@ -561,6 +783,11 @@ const Payments = () => {
           className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'payments' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>
           <Receipt className="w-4 h-4 inline mr-1.5" />
           {t('payments.title')}
+        </button>
+        <button onClick={() => setActiveTab('expenses')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'expenses' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>
+          <TrendingDown className="w-4 h-4 inline mr-1.5" />
+          {t('expenses.title')}
         </button>
         <button onClick={() => setActiveTab('history')}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>
@@ -1116,7 +1343,115 @@ const Payments = () => {
         </div>
       )}
 
-      </>) : (
+      </>) : activeTab === 'expenses' ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <TrendingDown className="w-5 h-5 text-red-500" />
+                <span>{t('expenses.title')}</span>
+              </h3>
+              <div className="flex gap-2">
+                <button onClick={handleExportExpensesPDF}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition-all">
+                  <FileDown className="w-4 h-4" />
+                  <span>PDF</span>
+                </button>
+                <button onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '' }); setShowCategoryModal(true); }}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition-all">
+                  <Plus className="w-4 h-4" />
+                  <span>{t('expenses.categories')}</span>
+                </button>
+                <button onClick={() => { setEditingExpense(null); setExpenseForm({ category: '', description: '', amount: '', expense_date: new Date().toISOString().split('T')[0], payment_method: 'cash', reference: '', notes: '' }); setShowExpenseForm(true); }}
+                  className="flex items-center space-x-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium transition-all">
+                  <Plus className="w-4 h-4" />
+                  <span>{t('expenses.add_expense')}</span>
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                <p className="text-xs font-medium text-red-500 uppercase">{t('expenses.total_expenses')}</p>
+                <p className="text-xl font-bold text-red-600 mt-1">{expenseStats.total.toLocaleString()} GNF</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                <p className="text-xs font-medium text-orange-500 uppercase">{t('expenses.this_month')}</p>
+                <p className="text-xl font-bold text-orange-600 mt-1">{expenseStats.monthTotal.toLocaleString()} GNF</p>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-xs font-medium text-blue-500 uppercase">{t('expenses.total_count')}</p>
+                <p className="text-xl font-bold text-blue-600 mt-1">{expenseStats.count}</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-4 border border-green-100">
+                <p className="text-xs font-medium text-green-500 uppercase">{t('expenses.categories_count')}</p>
+                <p className="text-xl font-bold text-green-600 mt-1">{expenseCategories.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-5 border-b border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input type="text" placeholder={t('expenses.search')} value={expenseSearch}
+                  onChange={(e) => setExpenseSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-gray-50" />
+              </div>
+              <select value={filterExpenseCategory} onChange={(e) => setFilterExpenseCategory(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                <option value="">{t('expenses.all_categories')}</option>
+                {expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <input type="month" value={filterExpenseMonth} onChange={(e) => setFilterExpenseMonth(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t('expenses.date')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t('expenses.category')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t('expenses.description')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t('expenses.payment_method')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t('expenses.reference')}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">{t('expenses.amount')}</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase">{t('payments.actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenseLoading ? (
+                  <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">{t('expenses.loading')}</td></tr>
+                ) : filteredExpenses.length === 0 ? (
+                  <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">{t('expenses.no_expenses')}</td></tr>
+                ) : filteredExpenses.map(expense => (
+                  <tr key={expense.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 text-sm text-gray-700">{new Date(expense.expense_date).toLocaleDateString('fr-FR')}</td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">{expense.category_name}</span>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-gray-700 max-w-[200px] truncate">{expense.description}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500">{t(`payments.method.${expense.payment_method}`)}</td>
+                    <td className="px-5 py-3 text-sm text-gray-500 font-mono">{expense.reference || '—'}</td>
+                    <td className="px-5 py-3 text-sm font-semibold text-red-600 text-right">{parseFloat(expense.amount).toLocaleString()} GNF</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => { setEditingExpense(expense); setExpenseForm({ category: expense.category, description: expense.description, amount: expense.amount, expense_date: expense.expense_date, payment_method: expense.payment_method, reference: expense.reference || '', notes: expense.notes || '' }); setShowExpenseForm(true); }}
+                          className="w-7 h-7 flex items-center justify-center text-amber-500 bg-white border border-amber-200 rounded hover:bg-amber-50 transition-all" title={t('payments.edit')}>
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => handleDeleteExpense(expense)}
+                          className="w-7 h-7 flex items-center justify-center text-red-500 bg-white border border-red-200 rounded hover:bg-red-50 transition-all" title={t('payments.delete')}>
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
         <div className="bg-white rounded-2xl shadow-sm border">
           <PaymentHistoryList
             onViewPayment={(paymentId) => {
@@ -1325,6 +1660,123 @@ const Payments = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showExpenseForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">{editingExpense ? t('expenses.edit_expense') : t('expenses.add_expense')}</h2>
+              <button onClick={() => { setShowExpenseForm(false); setEditingExpense(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <Label>{t('expenses.category')} *</Label>
+                <select value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50">
+                  <option value="">{t('expenses.select_category')}</option>
+                  {expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>{t('expenses.description')} *</Label>
+                <input type="text" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" placeholder={t('expenses.descriptionPlaceholder')} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>{t('expenses.amount')} *</Label>
+                  <input type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" placeholder="0" />
+                </div>
+                <div>
+                  <Label>{t('expenses.date')} *</Label>
+                  <input type="date" value={expenseForm.expense_date} onChange={(e) => setExpenseForm({ ...expenseForm, expense_date: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>{t('expenses.payment_method')}</Label>
+                  <select value={expenseForm.payment_method} onChange={(e) => setExpenseForm({ ...expenseForm, payment_method: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50">
+                    <option value="cash">{t('payments.method.cash')}</option>
+                    <option value="bank_transfer">{t('payments.method.bank_transfer')}</option>
+                    <option value="mobile_money">{t('payments.method.mobile_money')}</option>
+                    <option value="check">{t('payments.method.check')}</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>{t('expenses.reference')}</Label>
+                  <input type="text" value={expenseForm.reference} onChange={(e) => setExpenseForm({ ...expenseForm, reference: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" placeholder={t('expenses.referencePlaceholder')} />
+                </div>
+              </div>
+              <div>
+                <Label>{t('expenses.notes')}</Label>
+                <textarea value={expenseForm.notes} onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })} rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" placeholder={t('expenses.notesPlaceholder')} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t bg-gray-50/50">
+              <button onClick={() => { setShowExpenseForm(false); setEditingExpense(null); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">{t('payments.cancel')}</button>
+              <button type="button" onClick={handleSaveExpense} disabled={savingExpense}
+                className="flex items-center space-x-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium disabled:opacity-50">
+                <Save className="w-4 h-4" />
+                <span>{savingExpense ? t('payments.saving') : (editingExpense ? t('payments.update') : t('payments.save'))}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">{editingCategory ? t('expenses.edit_category') : t('expenses.add_category')}</h2>
+              <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <Label>{t('expenses.category_name')} *</Label>
+                <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" placeholder={t('expenses.categoryNamePlaceholder')} />
+              </div>
+              <div>
+                <Label>{t('expenses.description')}</Label>
+                <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} rows={2}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-gray-50" />
+              </div>
+              {expenseCategories.length > 0 && (
+                <div>
+                  <Label>{t('expenses.existing_categories')}</Label>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {expenseCategories.map(c => (
+                      <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
+                        <span className="text-sm text-gray-700">{c.name}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setEditingCategory(c); setCategoryForm({ name: c.name, description: c.description || '' }); }}
+                            className="p-1 text-amber-600 hover:bg-amber-50 rounded"><Pencil className="w-3 h-3" /></button>
+                          <button onClick={() => { showModal('warning', t('payments.confirmDelete'), t('expenses.deleteCategoryConfirm'), async () => { try { await expenseService.deleteCategory(c.id); const res = await expenseService.getAllCategories(); setExpenseCategories(res.data.results || res.data); showModal('success', t('payments.success'), t('expenses.category_deleted')); } catch (err) { showModal('error', t('payments.error'), t('expenses.category_delete_error')); } }); }}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 px-6 py-4 border-t bg-gray-50/50">
+              <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium">{t('payments.cancel')}</button>
+              <button onClick={handleSaveCategory} disabled={savingCategory}
+                className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50">
+                <Save className="w-4 h-4" />
+                <span>{savingCategory ? t('payments.saving') : t('payments.save')}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

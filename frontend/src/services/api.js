@@ -220,6 +220,19 @@ export const paymentService = {
   initiateMobilePayment: (data) => api.post('/mobile/providers/initiate_payment/', data),
 };
 
+export const expenseService = {
+  getAll: (params) => api.get('/expenses/expenses/', { params }),
+  getById: (id) => api.get(`/expenses/expenses/${id}/`),
+  create: (data) => api.post('/expenses/expenses/', data),
+  update: (id, data) => api.patch(`/expenses/expenses/${id}/`, data),
+  delete: (id) => api.delete(`/expenses/expenses/${id}/`),
+  getSummary: () => api.get('/expenses/expenses/summary/'),
+  getAllCategories: (params) => api.get('/expenses/categories/', { params }),
+  createCategory: (data) => api.post('/expenses/categories/', data),
+  updateCategory: (id, data) => api.patch(`/expenses/categories/${id}/`, data),
+  deleteCategory: (id) => api.delete(`/expenses/categories/${id}/`),
+};
+
 export const communicationService = {
   getAllMessages: (params) => api.get('/communication/messages/', { params }),
   getAllNotifications: (params) => api.get('/communication/notifications/', { params }),

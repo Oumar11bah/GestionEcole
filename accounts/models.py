@@ -49,9 +49,9 @@ class UserProfile(models.Model):
 
 DEFAULT_ROLE_PERMISSIONS = {
     'super_admin': ['*'],
-    'admin': ['students', 'teachers', 'grades', 'results', 'payments', 'bulletins', 'classes', 'subjects', 'attendance', 'timetable', 'reports', 'dashboard', 'users', 'activity', 'security', 'registrations', 'rooms', 'settings'],
-    'comptable': ['payments', 'reports', 'dashboard'],
-    'directeur': ['dashboard', 'students', 'teachers', 'grades', 'results', 'bulletins', 'reports', 'activity'],
+    'admin': ['students', 'teachers', 'grades', 'results', 'payments', 'expenses', 'bulletins', 'classes', 'subjects', 'attendance', 'timetable', 'reports', 'dashboard', 'users', 'activity', 'security', 'registrations', 'rooms', 'settings'],
+    'comptable': ['payments', 'expenses', 'reports', 'dashboard'],
+    'directeur': ['dashboard', 'students', 'teachers', 'grades', 'results', 'bulletins', 'reports', 'activity', 'payments', 'expenses'],
     'surveillant': ['attendance', 'students', 'dashboard'],
     'enseignant': ['timetable', 'grades', 'bulletins', 'dashboard'],
     'secretaire': ['registrations', 'students', 'reports', 'dashboard', 'rooms'],
@@ -82,13 +82,20 @@ class Role(models.Model):
 
     @classmethod
     def get_or_default(cls, role_name):
+        default_perms = DEFAULT_ROLE_PERMISSIONS.get(role_name, [])
         role = cls.objects.filter(name=role_name, tenant__isnull=True).first()
         if role:
+            if default_perms and set(default_perms) - set(role.permissions):
+                role.permissions = default_perms
+                role.save(update_fields=['permissions'])
             return role
         try:
-            return cls.objects.get(name=role_name)
+            existing = cls.objects.get(name=role_name)
+            if default_perms and set(default_perms) - set(existing.permissions):
+                existing.permissions = default_perms
+                existing.save(update_fields=['permissions'])
+            return existing
         except cls.DoesNotExist:
-            default_perms = DEFAULT_ROLE_PERMISSIONS.get(role_name, [])
             role, _ = cls.objects.get_or_create(
                 name=role_name,
                 tenant=None,

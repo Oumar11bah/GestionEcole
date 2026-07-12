@@ -12,7 +12,7 @@ DEFAULT_CLASSES = {
 }
 
 class Command(BaseCommand):
-    help = 'Create default cycles and classes for EduManager'
+    help = 'Create default cycles and classes for EcolePro GN'
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS('Creating cycles and classes...'))

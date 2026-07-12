@@ -15,7 +15,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS('=' * 50))
-        self.stdout.write(self.style.SUCCESS('  EduManager - Configuration initiale'))
+        self.stdout.write(self.style.SUCCESS('  EcolePro GN - Configuration initiale'))
         self.stdout.write(self.style.SUCCESS('=' * 50))
 
         username = DEFAULT_ADMIN['username']

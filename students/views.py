@@ -412,6 +412,10 @@ class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         cycle = request.query_params.get('cycle', None)
         status = request.query_params.get('status', None)
 
+        tenant = get_request_tenant(request)
+        from school.models import SchoolInfo
+        school = SchoolInfo.objects.filter(tenant=tenant).first() if tenant else SchoolInfo.objects.first()
+
         class_name = None
         if class_id and class_id.isdigit():
             students = students.filter(class_assigned_id=class_id)
@@ -440,9 +444,31 @@ class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         styles = getSampleStyleSheet()
         story = []
 
+        s_name = school.name if school else SCHOOL_NAME
+        s_address = f"{school.address or ''}{', ' + school.city if school and school.city else ''}{', ' + school.country if school and school.country else ''}".strip(', ') if school else SCHOOL_ADDRESS
+        s_primary = HexColor(school.primary_color) if school and school.primary_color else PRIMARY_COLOR
+
+        if school and school.logo:
+            try:
+                logo = RLImage(school.logo.path, width=40*mm, height=15*mm)
+                logo_table = Table([[logo]], colWidths=[doc.width])
+                logo_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+                story.append(logo_table)
+            except Exception:
+                pass
+
         title_style = ParagraphStyle('Title2', parent=styles['Title'],
-                                      textColor=PRIMARY_COLOR, fontSize=16,
+                                      textColor=s_primary, fontSize=16,
                                       spaceAfter=4*mm, alignment=TA_CENTER)
+        info_style = ParagraphStyle('Info2', parent=styles['Normal'],
+                                     fontSize=9, alignment=TA_CENTER, textColor=MEDIUM_GRAY)
+
+        story.append(Paragraph(s_name, ParagraphStyle('SchoolName', parent=styles['Title'],
+                              fontSize=14, textColor=s_primary, alignment=TA_CENTER, spaceAfter=2*mm)))
+        if s_address:
+            story.append(Paragraph(s_address, info_style))
+        story.append(Spacer(1, 4*mm))
+
         title = f"Liste des Élèves de la {class_name}" if class_name else "Liste des Élèves"
         story.append(Paragraph(title, title_style))
         story.append(Spacer(1, 2*mm))
@@ -469,6 +495,19 @@ class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [WHITE, HexColor('#f0f4ff')]),
         ]))
         story.append(table)
+
+        if school and school.director_name:
+            sig_style = ParagraphStyle('Sig', fontSize=9, alignment=TA_CENTER, textColor=DARK_GRAY)
+            story.append(Spacer(1, 12*mm))
+            story.append(Paragraph(f"Le Directeur(trice): <b>{school.director_name}</b>", sig_style))
+            if school.director_signature:
+                try:
+                    sig_img = RLImage(school.director_signature.path, width=30*mm, height=15*mm)
+                    sig_table = Table([[sig_img]], colWidths=[doc.width])
+                    sig_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+                    story.append(sig_table)
+                except Exception:
+                    pass
 
         doc.build(story)
         buffer.seek(0)

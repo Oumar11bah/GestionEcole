@@ -102,18 +102,18 @@ class SchoolInfoViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         qs = self.get_queryset()
         instance = qs.first()
+        tenant = _get_tenant(request.user)
         if instance:
             serializer = self.get_serializer(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(tenant=tenant)
             return Response(serializer.data)
         data = request.data.copy()
-        tenant = _get_tenant(request.user)
         if tenant:
             data['tenant'] = tenant.id
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(tenant=tenant)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):

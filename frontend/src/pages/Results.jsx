@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, Download, Trophy, Users, TrendingUp, Award, Printer, X, Search, ChevronLeft, ChevronRight, ListChecks, GraduationCap } from 'lucide-react';
-import { resultService, gradeService, classService, cycleService } from '../services/api';
+import { resultService, gradeService, classService, cycleService, schoolService } from '../services/api';
 import { getPreferredAcademicYear, fetchAcademicYears } from '../utils/preferences';
+import { buildSchoolHeaderHTML } from '../utils/printHelpers';
 
 const RESULTS_PER_PAGE = 20;
 
@@ -26,6 +27,7 @@ const Results = () => {
   const [studentPage, setStudentPage] = useState(1);
   const [studentClassId, setStudentClassId] = useState('');
   const [studentTermId, setStudentTermId] = useState('');
+  const [schoolInfo, setSchoolInfo] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -33,11 +35,13 @@ const Results = () => {
       gradeService.getAllTerms(),
       cycleService.getAll(),
       fetchAcademicYears(),
-    ]).then(([cls, trm, cyc, yr]) => {
+      schoolService.get().catch(() => ({ data: null })),
+    ]).then(([cls, trm, cyc, yr, s]) => {
       setClasses(cls.data.results || cls.data);
       setTerms(trm.data.results || trm.data);
       setCycles(cyc.data.results || cyc.data);
       setYears(yr);
+      setSchoolInfo(s.data);
     });
   }, []);
 
@@ -113,8 +117,9 @@ const Results = () => {
     ).join('');
     printWin.document.write(`
       <html><head><title>${t('results.admis_list')}</title>
-      <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border:1px solid #ddd;text-align:left}th{background:#1e40af;color:#fff}h2{margin-bottom:4px}.meta{color:#666;font-size:13px;margin-bottom:16px}</style>
+      <style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border:1px solid #ddd;text-align:left}th{background:${schoolInfo?.primary_color || '#1e40af'};color:#fff}h2{margin-bottom:4px}.meta{color:#666;font-size:13px;margin-bottom:16px}</style>
       </head><body>
+      ${buildSchoolHeaderHTML(schoolInfo)}
       <h2>${t('results.admis_list')}</h2>
       <div class="meta">${admisModal?.class} • ${admisModal?.term} • ${admisModal?.count} ${t('results.student_s')}</div>
       <table><thead><tr><th>${t('results.num')}</th><th>${t('results.matricule')}</th><th>${t('results.name')}</th><th>${t('results.average')}</th><th>${t('results.rank')}</th></tr></thead><tbody>${rows}</tbody></table>

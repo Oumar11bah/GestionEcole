@@ -47,8 +47,26 @@ ORANGE = HexColor('#ea580c')
 GRAY = HexColor('#6b7280')
 DARK = HexColor('#1f2937')
 
-SCHOOL_NAME = "Ecole Privee Excellence"
-SCHOOL_ADDRESS = "Conakry, Republique de Guinee"
+
+def _get_school_info(tenant=None):
+    try:
+        from school.models import SchoolInfo
+        qs = SchoolInfo.objects.all()
+        if tenant:
+            qs = qs.filter(tenant=tenant)
+        info = qs.first()
+        if info:
+            return {
+                'name': info.name or 'Ecole Privee Excellence',
+                'address': f"{info.address or ''}{', ' + info.city if info.city else ''}{', ' + info.country if info.country else ''}".strip(', '),
+                'phone': info.phone or '',
+                'logo_path': info.logo.path if info.logo else None,
+                'director_name': info.director_name or '',
+                'signature_path': info.director_signature.path if info.director_signature else None,
+            }
+    except Exception:
+        pass
+    return {'name': 'Ecole Privee Excellence', 'address': 'Conakry, Republique de Guinee', 'phone': '', 'logo_path': None, 'director_name': '', 'signature_path': None}
 
 def get_appreciation(avg):
     try:
@@ -467,13 +485,24 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
                 queryset = queryset.filter(student__class_assigned_id=class_id)
         return queryset
 
-    def _build_bulletin_elements(self, student, term, styles, doc):
+    def _build_bulletin_elements(self, student, term, styles, doc, school_info=None):
         """Build ReportLab elements for a single student's bulletin."""
         elements = []
+        si = school_info or _get_school_info()
+
+        if si.get('logo_path'):
+            try:
+                from reportlab.platypus import Image as RLImage
+                logo = RLImage(si['logo_path'], width=35*mm, height=12*mm)
+                logo_table = Table([[logo]], colWidths=[doc.width])
+                logo_table.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
+                elements.append(logo_table)
+            except Exception:
+                pass
 
         header_data = [
-            [Paragraph(SCHOOL_NAME, styles['SchoolHeader'])],
-            [Paragraph(SCHOOL_ADDRESS, styles['Info'])],
+            [Paragraph(si['name'], styles['SchoolHeader'])],
+            [Paragraph(si['address'], styles['Info'])],
         ]
         header_table = Table(header_data, colWidths=[doc.width])
         header_table.setStyle(TableStyle([
@@ -608,7 +637,7 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
         sig_data = [
             [
-                Paragraph("Le Directeur", styles['Signature']),
+                Paragraph("Le Directeur" + (f"\n{si['director_name']}" if si.get('director_name') else ''), styles['Signature']),
                 Paragraph("L'Enseignant", styles['Signature']),
                 Paragraph("Le Parent/Tuteur", styles['Signature']),
             ],
@@ -624,9 +653,19 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ]))
         elements.append(sig_table)
+
+        if si.get('signature_path'):
+            try:
+                from reportlab.platypus import Image as RLImage
+                sig_img = RLImage(si['signature_path'], width=30*mm, height=15*mm)
+                sig_img_table = Table([[sig_img]], colWidths=[55*mm, 55*mm, 55*mm])
+                sig_img_table.setStyle(TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER')]))
+                elements.append(sig_img_table)
+            except Exception:
+                pass
         elements.append(Spacer(0, 5*mm))
         footer = Paragraph(
-            f"<i>EduManager - Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')}</i>",
+            f"<i>EcolePro GN - Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')}</i>",
             ParagraphStyle('footer', parent=styles['Info'], alignment=TA_CENTER, fontSize=7, textColor=HexColor('#9ca3af'))
         )
         elements.append(footer)
@@ -646,6 +685,10 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             term = Term.objects.get(id=term_id)
         except (Student.DoesNotExist, Term.DoesNotExist):
             return Response({'error': 'Eleve ou trimestre introuvable'}, status=404)
+
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+        si = _get_school_info(tenant)
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -721,7 +764,7 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             alignment=TA_CENTER,
         ))
 
-        elements = self._build_bulletin_elements(student, term, styles, doc)
+        elements = self._build_bulletin_elements(student, term, styles, doc, school_info=si)
 
         doc.build(elements)
         buffer.seek(0)
@@ -738,6 +781,10 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
         if not class_id or not term_id:
             return Response({'error': 'class_id and term_id are required'}, status=400)
+
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+        si = _get_school_info(tenant)
 
         try:
             term = Term.objects.get(id=term_id)
@@ -779,7 +826,7 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         for i, student in enumerate(students):
             if i > 0:
                 all_elements.append(PageBreak())
-            student_elements = self._build_bulletin_elements(student, term, styles, doc)
+            student_elements = self._build_bulletin_elements(student, term, styles, doc, school_info=si)
             all_elements.extend(student_elements)
 
         doc.build(all_elements)
@@ -892,7 +939,9 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             return Response({'error': 'Classe ou trimestre introuvable'}, status=404)
 
         from school.models import SchoolInfo
-        school = SchoolInfo.objects.first()
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+        school = SchoolInfo.objects.filter(tenant=tenant).first() if tenant else SchoolInfo.objects.first()
 
         cycle_name = cls.cycle.name if cls.cycle else 'college'
         max_score = 10 if cycle_name == 'primaire' else 20
@@ -1058,7 +1107,7 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         elements.append(sig_table)
         elements.append(Spacer(0, 5*mm))
         elements.append(Paragraph(
-            f"<i>Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} - EduManager</i>",
+            f"<i>Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')} - EcolePro GN</i>",
             ParagraphStyle('footer', parent=subtitle_style, fontSize=7, textColor=HexColor('#9ca3af'))
         ))
 
@@ -1100,8 +1149,10 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         from school.models import SchoolInfo
-        school = SchoolInfo.objects.first()
-        school_name = school.name if school else SCHOOL_NAME
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+        school = SchoolInfo.objects.filter(tenant=tenant).first() if tenant else SchoolInfo.objects.first()
+        school_name = school.name if school else 'Ecole Privee Excellence'
 
         wb = Workbook()
         ws = wb.active

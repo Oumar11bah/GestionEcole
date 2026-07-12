@@ -5,13 +5,19 @@ import { BarChart3, Users, CreditCard, Calendar, Download, Clock, Trash2, AlertT
 import MessageModal from '../components/MessageModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { studentService, paymentService, attendanceService, gradeService, activityService, classService } from '../services/api';
+import { studentService, paymentService, attendanceService, gradeService, activityService, classService, schoolService } from '../services/api';
 
 const MODEL_KEYS = {
   Student: 'reports.student', Payment: 'reports.payment', Attendance: 'reports.attendance',
   Grade: 'reports.grade', Teacher: 'reports.teacher', Class: 'reports.class',
   Subject: 'reports.subject', Registration: 'reports.registration', Room: 'reports.room',
 };
+
+function hexToRgb(hex) {
+  if (!hex) return { r: 30, g: 60, b: 159 };
+  const h = hex.replace('#', '');
+  return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+}
 
 const Reports = () => {
   const { t } = useTranslation();
@@ -24,6 +30,7 @@ const Reports = () => {
   const [classes, setClasses] = useState([]);
   const [filterClass, setFilterClass] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [schoolInfo, setSchoolInfo] = useState(null);
 
   const reportOptions = [
     { id: 'students', label: t('reports.studentsStats'), icon: Users },
@@ -38,6 +45,7 @@ const Reports = () => {
     setRawData(null);
     setFilterDate('');
     fetchReport();
+    schoolService.get().then((res) => setSchoolInfo(res.data)).catch(() => {});
     if (reportType === 'grades') {
       classService.getAll()
         .then((res) => {
@@ -178,13 +186,16 @@ const Reports = () => {
       activity: t('reports.pdfActivity'),
     };
 
-    doc.setFillColor(37, 99, 235);
+    const primaryRGB = schoolInfo?.primary_color ? hexToRgb(schoolInfo.primary_color) : { r: 30, g: 60, b: 159 };
+    doc.setFillColor(primaryRGB.r, primaryRGB.g, primaryRGB.b);
     doc.rect(0, 0, pageWidth, 28, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(titles[reportType], 14, 18);
-    doc.setFontSize(9);
+    doc.text(schoolInfo?.name || 'ECOLE PRIVEE EXCELLENCE', 14, 12);
+    doc.setFontSize(13);
+    doc.text(titles[reportType], 14, 21);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.text(`${t('reports.generatedOn')} ${new Date().toLocaleDateString('fr-FR')} ${t('reports.at')} ${new Date().toLocaleTimeString('fr-FR')}`, 14, 25);
 

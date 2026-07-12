@@ -77,6 +77,12 @@ class CanManageSalaries(permissions.BasePermission):
             return False
         return get_user_role(request.user) in ['super_admin', 'admin', 'comptable']
 
+class CanManageExpenses(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        return has_profile_access(request.user, 'expenses')
+
 class CanExportData(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:

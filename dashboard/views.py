@@ -10,6 +10,7 @@ from accounts.permissions import CanViewActivity, IsAdminOrSuperAdmin, RoleBased
 from accounts.utils import get_user_role
 from students.models import Student
 from payments.models import Payment
+from expenses.models import Expense
 from classes.models import Cycle, Class
 from teachers.models import Teacher
 from grades.models import Grade, StudentAverage
@@ -102,6 +103,7 @@ class DashboardViewSet(viewsets.ViewSet):
         total_students = Student.objects.filter(**tenant_filter).count()
         total_teachers = Teacher.objects.filter(is_active=True, **tenant_filter).count()
         total_payments = Payment.objects.filter(status__in=['completed', 'partial'], **tenant_filter).aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+        total_expenses = Expense.objects.filter(**tenant_filter).aggregate(Sum('amount'))['amount__sum'] or 0
         total_classes = Class.objects.filter(**tenant_filter).count()
 
         students_by_cycle = {}
@@ -167,6 +169,7 @@ class DashboardViewSet(viewsets.ViewSet):
             'total_students': total_students,
             'total_teachers': total_teachers,
             'total_payments': float(total_payments),
+            'total_expenses': float(total_expenses),
             'total_classes': total_classes,
             'students_by_cycle': students_by_cycle,
             'recent_activities': recent_activities,
