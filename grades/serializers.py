@@ -7,6 +7,7 @@ class TermSerializer(serializers.ModelSerializer):
     class Meta:
         model = Term
         fields = ['id', 'name', 'academic_year', 'start_date', 'end_date', 'is_active', 'tenant']
+        read_only_fields = ['tenant']
 
 class StudentBasicSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,7 +33,7 @@ class GradeSerializer(serializers.ModelSerializer):
                   'max_score', 'cycle_max_score', 'average', 'appreciation',
                   'date_recorded', 'comment', 'locked', 'tenant',
                   'created_at', 'updated_at']
-        read_only_fields = ['max_score', 'average', 'appreciation', 'cycle_max_score', 'locked']
+        read_only_fields = ['max_score', 'average', 'appreciation', 'cycle_max_score', 'locked', 'tenant']
 
     def get_teacher_subject_name(self, obj):
         return obj.teacher_subject.subject.name
@@ -103,6 +104,7 @@ class StudentAverageSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentAverage
         fields = ['id', 'student', 'student_id', 'term', 'term_id', 'average', 'rank', 'tenant', 'calculated_at']
+        read_only_fields = ['tenant']
 
     def create(self, validated_data):
         validated_data['student'] = Student.objects.get(id=validated_data.pop('student_id'))

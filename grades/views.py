@@ -29,7 +29,7 @@ from openpyxl import load_workbook
 from .models import Term, Grade, GradeHistory, StudentAverage
 from .serializers import TermSerializer, GradeSerializer, GradeHistorySerializer, StudentAverageSerializer
 from accounts.permissions import CanManageGrades
-from accounts.utils import TenantAwareMixin
+from accounts.utils import TenantAwareMixin, get_request_tenant
 from accounts.utils import get_user_role
 
 from students.models import Student
@@ -58,7 +58,11 @@ def _get_school_info(tenant=None):
         if info:
             return {
                 'name': info.name or 'Ecole Privee Excellence',
-                'address': f"{info.address or ''}{', ' + info.city if info.city else ''}{', ' + info.country if info.country else ''}".strip(', '),
+                'address': ', '.join(dict.fromkeys(filter(None, [
+                    info.address or '',
+                    info.city if info.city and info.city.lower() != (info.address or '').lower() else '',
+                    info.country or '',
+                ]))) or 'Conakry, Republique de Guinee',
                 'phone': info.phone or '',
                 'logo_path': info.logo.path if info.logo else None,
                 'director_name': info.director_name or '',
@@ -97,7 +101,8 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         return user.is_staff or get_user_role(user) in ['super_admin', 'admin']
 
     def perform_create(self, serializer):
-        grade = serializer.save()
+        tenant = self._get_tenant()
+        grade = serializer.save(tenant=tenant) if tenant else serializer.save()
         if not self._is_admin(self.request.user):
             grade.locked = True
             grade.save(update_fields=['locked'])
@@ -201,7 +206,11 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         except Subject.DoesNotExist:
             return Response({'error': 'Matière introuvable'}, status=status.HTTP_404_NOT_FOUND)
 
+        tenant = get_request_tenant(request)
+
         students = Student.objects.filter(class_assigned_id=class_id)
+        if tenant:
+            students = students.filter(tenant=tenant)
         if not students.exists():
             return Response({'error': 'Aucun élève dans cette classe'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -213,12 +222,14 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         if not teacher_subject:
             teacher = subject.teacher
             if not teacher:
-                teacher = Teacher.objects.filter(is_active=True).first()
+                teacher_qs = Teacher.objects.filter(is_active=True)
+                if tenant:
+                    teacher_qs = teacher_qs.filter(tenant=tenant)
+                teacher = teacher_qs.first()
             if not teacher:
                 return Response({
                     'error': 'Aucun enseignant trouvé dans le système. Créez d\'abord un enseignant.'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            tenant = self._get_tenant()
             teacher_subject, _ = TeacherSubject.objects.get_or_create(
                 teacher=teacher,
                 subject=subject,
@@ -229,7 +240,6 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
                 }
             )
 
-        tenant = self._get_tenant()
         created = 0
         for student in students:
             _, was_created = Grade.objects.get_or_create(
@@ -262,6 +272,10 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             students = Student.objects.filter(id=student_id)
         else:
             students = Student.objects.filter(status='active')
+
+        tenant = get_request_tenant(request)
+        if tenant:
+            students = students.filter(tenant=tenant)
 
         for student in students:
             StudentAverage.calculate_average(student, term)
@@ -300,6 +314,9 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
             return Response({'error': 'Matiere introuvable'}, status=status.HTTP_404_NOT_FOUND)
 
         students_in_class = Student.objects.filter(class_assigned_id=class_id)
+        tenant = get_request_tenant(request)
+        if tenant:
+            students_in_class = students_in_class.filter(tenant=tenant)
         if not students_in_class.exists():
             return Response({'error': 'Aucun eleve dans cette classe'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -420,7 +437,10 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         subject_id = request.query_params.get('subject_id', None)
         class_id = request.query_params.get('class_id', None)
 
+        tenant = get_request_tenant(request)
         queryset = GradeHistory.objects.select_related('grade', 'user')
+        if tenant:
+            queryset = queryset.filter(tenant=tenant)
         if grade_id:
             queryset = queryset.filter(grade_id=grade_id)
         if student_id:
@@ -447,13 +467,13 @@ class GradeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         return Response({'locked': grade.locked, 'id': grade.id})
 
 
-class GradeHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+class GradeHistoryViewSet(TenantAwareMixin, viewsets.ReadOnlyModelViewSet):
     queryset = GradeHistory.objects.select_related('grade', 'user').all()
     serializer_class = GradeHistorySerializer
     permission_classes = [IsAuthenticated, CanManageGrades]
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = super().get_queryset()
         grade_id = self.request.query_params.get('grade_id', None)
         student_id = self.request.query_params.get('student_id', None)
         subject_id = self.request.query_params.get('subject_id', None)
@@ -608,6 +628,8 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         elements.append(grade_table)
         elements.append(Spacer(0, 8*mm))
 
+        total_students = StudentAverage.objects.filter(term=term, student__class_assigned=student.class_assigned).count() if student.class_assigned else 1
+
         average_obj = StudentAverage.objects.filter(student=student, term=term).first()
         if average_obj:
             gen_avg = f"{float(average_obj.average):.2f}"
@@ -620,7 +642,7 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
         summary_data = [
             [Paragraph('<b>Moyenne Generale</b>', styles['Bold']), Paragraph(gen_avg + '/20', styles['Bold']),
-             Paragraph('<b>Rang</b>', styles['Bold']), Paragraph(f"{rank}/{len(grades) if grades.exists() else 1}", styles['Bold']),
+             Paragraph('<b>Rang</b>', styles['Bold']), Paragraph(f"{rank}/{total_students}", styles['Bold']),
              Paragraph('<b>Appreciation</b>', styles['Bold']), Paragraph(appr, styles['Bold'])],
         ]
         summary_table = Table(summary_data, colWidths=[40*mm, 25*mm, 20*mm, 25*mm, 30*mm, 30*mm])
@@ -680,14 +702,20 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         if not student_id or not term_id:
             return Response({'error': 'student_id and term_id are required'}, status=400)
 
+        tenant = get_request_tenant(request)
+
         try:
-            student = Student.objects.get(id=student_id)
-            term = Term.objects.get(id=term_id)
+            student_qs = Student.objects.all()
+            if tenant:
+                student_qs = student_qs.filter(tenant=tenant)
+            student = student_qs.get(id=student_id)
+            term_qs = Term.objects.all()
+            if tenant:
+                term_qs = term_qs.filter(tenant=tenant)
+            term = term_qs.get(id=term_id)
         except (Student.DoesNotExist, Term.DoesNotExist):
             return Response({'error': 'Eleve ou trimestre introuvable'}, status=404)
 
-        from accounts.utils import get_request_tenant
-        tenant = get_request_tenant(request)
         si = _get_school_info(tenant)
 
         buffer = io.BytesIO()
@@ -793,9 +821,16 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         except (Term.DoesNotExist, Class.DoesNotExist):
             return Response({'error': 'Classe ou trimestre introuvable'}, status=404)
 
-        students = Student.objects.filter(class_assigned_id=class_id).order_by('last_name', 'first_name')
+        students = Student.objects.filter(class_assigned_id=class_id)
+        if tenant:
+            students = students.filter(tenant=tenant)
         if not students.exists():
             return Response({'error': 'Aucun eleve dans cette classe'}, status=404)
+
+        student_ranks = {}
+        for avg in StudentAverage.objects.filter(term=term, student__class_assigned_id=class_id):
+            student_ranks[avg.student_id] = avg.rank or 9999
+        students = sorted(students, key=lambda s: (student_ranks.get(s.id, 9999), s.last_name, s.first_name))
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -856,10 +891,16 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         max_score = 10 if cycle_name == 'primaire' else 20
         passing_score = max_score / 2
 
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+
         averages = StudentAverage.objects.filter(
             term_id=term_id,
             student__class_assigned_id=class_id,
-        ).select_related('student', 'student__class_assigned', 'student__class_assigned__cycle').order_by('-average')
+        )
+        if tenant:
+            averages = averages.filter(tenant=tenant)
+        averages = averages.select_related('student', 'student__class_assigned', 'student__class_assigned__cycle').order_by('-average')
 
         results = []
         for avg in averages:
@@ -950,7 +991,10 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         averages = StudentAverage.objects.filter(
             term_id=term_id,
             student__class_assigned_id=class_id,
-        ).select_related('student').order_by('-average')
+        )
+        if tenant:
+            averages = averages.filter(tenant=tenant)
+        averages = averages.select_related('student').order_by('-average')
 
         results = []
         for avg in averages:
@@ -1140,17 +1184,21 @@ class StudentAverageViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         max_score = 10 if cycle_name == 'primaire' else 20
         passing_score = max_score / 2
 
+        from accounts.utils import get_request_tenant
+        tenant = get_request_tenant(request)
+
         averages = StudentAverage.objects.filter(
             term_id=term_id,
             student__class_assigned_id=class_id,
-        ).select_related('student').order_by('-average')
+        )
+        if tenant:
+            averages = averages.filter(tenant=tenant)
+        averages = averages.select_related('student').order_by('-average')
 
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         from school.models import SchoolInfo
-        from accounts.utils import get_request_tenant
-        tenant = get_request_tenant(request)
         school = SchoolInfo.objects.filter(tenant=tenant).first() if tenant else SchoolInfo.objects.first()
         school_name = school.name if school else 'Ecole Privee Excellence'
 

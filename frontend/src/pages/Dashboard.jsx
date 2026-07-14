@@ -201,6 +201,7 @@ const Dashboard = () => {
                 <Line type="monotone" dataKey="primaire" stroke="#3B82F6" strokeWidth={2} dot={{ r: 4 }} name={t('dashboard.primary')} />
                 <Line type="monotone" dataKey="college" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} name={t('dashboard.middleSchool')} />
                 <Line type="monotone" dataKey="lycee" stroke="#F59E0B" strokeWidth={2} dot={{ r: 4 }} name={t('dashboard.highSchool')} />
+                <Line type="monotone" dataKey="prescolaire" stroke="#F97316" strokeWidth={2} dot={{ r: 4 }} name={t('dashboard.preschool')} />
               </LineChart>
             </ResponsiveContainer>
           </div>

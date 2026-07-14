@@ -8,6 +8,7 @@ class CycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cycle
         fields = ['id', 'name', 'display_name', 'description', 'tenant']
+        read_only_fields = ['tenant']
 
     def get_display_name(self, obj):
         return obj.get_name_display()
@@ -17,15 +18,22 @@ class ClassSerializer(serializers.ModelSerializer):
     cycle_name = serializers.CharField(write_only=True, required=False)
     student_count = serializers.SerializerMethodField()
     display_name = serializers.ReadOnlyField()
+    class_teacher_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Class
         fields = ['id', 'name', 'display_name', 'cycle', 'cycle_name',
                   'specialty', 'capacity', 'academic_year', 'tenant',
-                  'class_teacher', 'student_count', 'created_at']
+                  'class_teacher', 'class_teacher_name', 'student_count', 'created_at']
+        read_only_fields = ['tenant']
     
     def get_student_count(self, obj):
         return obj.student_count()
+
+    def get_class_teacher_name(self, obj):
+        if obj.class_teacher:
+            return f"{obj.class_teacher.first_name} {obj.class_teacher.last_name}".strip()
+        return None
     
     def create(self, validated_data):
         cycle_name = validated_data.pop('cycle_name', None)
@@ -60,6 +68,7 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
         model = ScheduleEntry
         fields = ['id', 'class_assigned', 'class_assigned_id', 'subject_name', 'teacher_name',
                   'room', 'day', 'start_time', 'end_time', 'observation', 'tenant']
+        read_only_fields = ['tenant']
 
     def validate(self, attrs):
         instance_id = self.instance.id if self.instance else None
@@ -69,6 +78,7 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
         room = attrs.get('room', self.instance.room if self.instance else '')
         teacher_name = attrs.get('teacher_name', self.instance.teacher_name if self.instance else '')
         class_assigned_id = attrs.get('class_assigned_id', self.instance.class_assigned_id if self.instance else None)
+        tenant = self.context['request'].user.profile.tenant if hasattr(self.context.get('request', None), 'user') and hasattr(self.context['request'].user, 'profile') else None
 
         if start_time and end_time and start_time >= end_time:
             raise serializers.ValidationError("L'heure de fin doit être après l'heure de début")
@@ -77,6 +87,8 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
 
         if room and day and start_time and end_time:
             room_qs = ScheduleEntry.objects.filter(day=day, room=room)
+            if tenant:
+                room_qs = room_qs.filter(tenant=tenant)
             if instance_id:
                 room_qs = room_qs.exclude(id=instance_id)
             for entry in room_qs:
@@ -90,6 +102,8 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
 
         if teacher_name and day and start_time and end_time:
             teacher_qs = ScheduleEntry.objects.filter(day=day, teacher_name=teacher_name)
+            if tenant:
+                teacher_qs = teacher_qs.filter(tenant=tenant)
             if instance_id:
                 teacher_qs = teacher_qs.exclude(id=instance_id)
             for entry in teacher_qs:
@@ -103,6 +117,8 @@ class ScheduleEntrySerializer(serializers.ModelSerializer):
 
         if class_assigned_id and day and start_time and end_time:
             class_qs = ScheduleEntry.objects.filter(day=day, class_assigned_id=class_assigned_id)
+            if tenant:
+                class_qs = class_qs.filter(tenant=tenant)
             if instance_id:
                 class_qs = class_qs.exclude(id=instance_id)
             for entry in class_qs:

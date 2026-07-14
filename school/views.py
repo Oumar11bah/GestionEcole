@@ -137,3 +137,10 @@ class SemesterViewSet(viewsets.ModelViewSet):
         if year:
             qs = qs.filter(academic_year__name=year)
         return qs
+
+    def perform_create(self, serializer):
+        academic_year = serializer.validated_data.get('academic_year')
+        if academic_year and academic_year.tenant:
+            serializer.save(tenant=academic_year.tenant)
+        else:
+            serializer.save()

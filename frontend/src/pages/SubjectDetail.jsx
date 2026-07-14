@@ -178,13 +178,19 @@ const SubjectDetail = () => {
               </div>
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t('subjectDetail.assignedTo')}</p>
-                <p className="text-gray-900 text-sm font-medium mt-0.5">
-                  {subject.teacher ? (
-                    <span>{subject.teacher}</span>
-                  ) : (
-                    <span className="text-gray-400">{t('subjectDetail.noTeacher')}</span>
-                  )}
-                </p>
+                {subject.assigned_teachers && subject.assigned_teachers.length > 0 ? (
+                  <div className="mt-1 space-y-1">
+                    {subject.assigned_teachers.map((t, i) => (
+                      <p key={i} className="text-gray-900 text-sm font-medium">
+                        {t.name}{t.class_name ? <span className="text-gray-400 font-normal"> — {t.class_name}</span> : ''}
+                      </p>
+                    ))}
+                  </div>
+                ) : subject.teacher_name ? (
+                  <p className="text-gray-900 text-sm font-medium mt-0.5">{subject.teacher_name}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm mt-0.5">{t('subjectDetail.noTeacher')}</p>
+                )}
               </div>
             </div>
           </div>

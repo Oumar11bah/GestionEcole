@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { X } from 'lucide-react';
 import Label from '../components/Label';
-import { classService } from '../services/api';
+import { classService, teacherService } from '../services/api';
 import MessageModal from '../components/MessageModal';
 import { getDefaultAcademicYear, fetchAcademicYears } from '../utils/preferences';
 
@@ -30,10 +30,12 @@ const ClassForm = () => {
     cycle_name: 'primaire',
     specialty: 'none',
     academic_year: getDefaultAcademicYear() || '2024-2025',
+    class_teacher: '',
   });
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const [academicYears, setAcademicYears] = useState([]);
+  const [teachers, setTeachers] = useState([]);
 
   const showModal = (variant, title, message, onConfirm) => {
     setModal({ open: true, variant, title, message, onConfirm, confirmLabel: onConfirm ? t('classForm.confirmLabel') : '' });
@@ -49,6 +51,9 @@ const ClassForm = () => {
         setFormData(prev => ({...prev, academic_year: yrs[0].name}));
       }
     });
+    teacherService.getAll().then((res) => {
+      setTeachers(res.data.results || res.data || []);
+    }).catch(() => {});
     if (isEditing) fetchClass();
   }, [id]);
 
@@ -60,6 +65,7 @@ const ClassForm = () => {
         cycle_name: response.data.cycle?.name || response.data.cycle_name || 'primaire',
         specialty: response.data.specialty || 'none',
         academic_year: response.data.academic_year || getDefaultAcademicYear() || '2024-2025',
+        class_teacher: response.data.class_teacher || '',
       });
     } catch (error) {
       console.error('Failed to fetch class:', error);
@@ -77,6 +83,7 @@ const ClassForm = () => {
     const submitData = {
       ...formData,
       specialty: formData.cycle_name === 'lycee' ? formData.specialty : 'none',
+      class_teacher: formData.class_teacher || null,
     };
 
     setLoading(true);
@@ -191,6 +198,20 @@ const ClassForm = () => {
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <Label>{t('classForm.classTeacher')}</Label>
+          <select
+            value={formData.class_teacher}
+            onChange={(e) => setFormData({...formData, class_teacher: e.target.value})}
+            className="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">{t('classForm.selectDefault')}</option>
+            {teachers.filter(t => t.is_active).map((t) => (
+              <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-wrap justify-end gap-3 pt-4 border-t">

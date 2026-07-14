@@ -5,12 +5,23 @@ from rest_framework.permissions import IsAuthenticated
 from .models import FeeType, Payment, PaymentHistory
 from .serializers import FeeTypeSerializer, PaymentSerializer, PaymentHistorySerializer
 from accounts.permissions import CanManagePayments
-from accounts.utils import TenantAwareMixin, get_user_role
+from accounts.utils import TenantAwareMixin, get_user_role, get_request_tenant
 
 class FeeTypeViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = FeeType.objects.all()
     serializer_class = FeeTypeSerializer
     permission_classes = [IsAuthenticated, CanManagePayments]
+
+    def list(self, request, *args, **kwargs):
+        try:
+            return super().list(request, *args, **kwargs)
+        except Exception as exc:
+            import traceback
+            traceback.print_exc()
+            return Response({
+                'error': str(exc),
+                'traceback': traceback.format_exc(),
+            }, status=500)
 
 class PaymentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     queryset = Payment.objects.all()
@@ -66,7 +77,11 @@ class PaymentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     def student_balance(self, request):
         student_id = request.query_params.get('student_id')
         if student_id:
-            payments = Payment.objects.filter(student_id=student_id, status__in=['completed', 'partial'])
+            tenant = get_request_tenant(request)
+            payments_qs = Payment.objects.filter(student_id=student_id, status__in=['completed', 'partial'])
+            if tenant:
+                payments_qs = payments_qs.filter(tenant=tenant)
+            payments = payments_qs
             total_paid = sum(p.amount_paid for p in payments)
             return Response({'total_paid': total_paid})
         return Response({'error': 'student_id required'}, status=400)

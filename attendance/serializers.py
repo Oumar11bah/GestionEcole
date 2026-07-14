@@ -27,6 +27,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
         fields = ['id', 'student', 'student_id', 'date', 'status', 'recorded_by', 'recorded_by_id', 'comment', 'tenant', 'created_at']
+        read_only_fields = ['tenant']
     
     def create(self, validated_data):
         validated_data['student'] = Student.objects.get(id=validated_data.pop('student_id'))

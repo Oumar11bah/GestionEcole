@@ -21,7 +21,6 @@ function hexToRgb(hex) {
 const statusConfig = {
   completed: { icon: CheckCircle, label: 'payments.status.completed', bg: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
   partial: { icon: Clock, label: 'payments.status.partial', bg: 'bg-orange-100 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
-  pending: { icon: Clock, label: 'payments.status.pending', bg: 'bg-yellow-100 text-yellow-700 border-yellow-200', dot: 'bg-yellow-500' },
   failed: { icon: XCircle, label: 'payments.status.failed', bg: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500' },
   cancelled: { icon: XCircle, label: 'payments.status.cancelled', bg: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-500' },
 };
@@ -176,14 +175,14 @@ const Payments = () => {
   const [form, setForm] = useState({
     student_id: '', fee_type_id: '', total_amount: '', amount_paid: '',
     payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0],
-    month_concerned: '', academic_year: getDefaultAcademicYear() || '2024-2025', reference: '', notes: '', status: 'pending',
+    month_concerned: '', academic_year: getDefaultAcademicYear() || '2024-2025', reference: '', notes: '', status: 'partial',
   });
   const [saving, setSaving] = useState(false);
   const [viewPayment, setViewPayment] = useState(null);
   const [editingPayment, setEditingPayment] = useState(null);
   const [modal, setModal] = useState({ open: false, variant: 'info', title: '', message: '', onConfirm: null, confirmLabel: '' });
   const [showFeeTypeModal, setShowFeeTypeModal] = useState(false);
-  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', description: '', amount: '', cycle: 'all', is_active: true });
+  const [feeTypeForm, setFeeTypeForm] = useState({ name: '', description: '', amount: '', cycle: 'all', class_assigned: [], is_active: true });
   const [editingFeeType, setEditingFeeType] = useState(null);
   const [savingFeeType, setSavingFeeType] = useState(false);
   const [partialPayment, setPartialPayment] = useState(null);
@@ -217,19 +216,19 @@ const Payments = () => {
   };
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       paymentService.getAll(),
       studentService.getAll(),
       paymentService.getAllFeeTypes(),
       classService.getAll(),
-      schoolService.get().catch(() => ({ data: null })),
+      schoolService.get(),
     ]).then(([p, s, f, c, sc]) => {
-      setPayments(p.data.results || p.data);
-      setStudents(s.data.results || s.data);
-      setFeeTypes(f.data.results || f.data);
-      setClasses(c.data.results || c.data);
-      setSchoolInfo(sc.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+      if (p.status === 'fulfilled') setPayments(p.value.data.results || p.value.data);
+      if (s.status === 'fulfilled') setStudents(s.value.data.results || s.value.data);
+      if (f.status === 'fulfilled') setFeeTypes(f.value.data.results || f.value.data);
+      if (c.status === 'fulfilled') setClasses(c.value.data.results || c.value.data);
+      if (sc.status === 'fulfilled') setSchoolInfo(sc.value.data);
+    }).finally(() => setLoading(false));
     if (searchParams.get('action') === 'new') setShowForm(true);
   }, []);
 
@@ -451,6 +450,16 @@ const Payments = () => {
 
   const selectedStudent = students.find((s) => s.id === parseInt(form.student_id));
 
+  const filteredFeeTypes = useMemo(() => {
+    if (!selectedStudent) return feeTypes;
+    const studentClassId = selectedStudent.class_assigned || selectedStudent.class_assigned_id;
+    if (!studentClassId) return feeTypes;
+    return feeTypes.filter(f => {
+      if (!f.class_assigned || f.class_assigned.length === 0) return true;
+      return f.class_assigned.includes(studentClassId);
+    });
+  }, [feeTypes, selectedStudent]);
+
   const translateMonth = (month) => {
     const option = monthOptions.find((m) => m.value === month);
     return option ? t(`payments.month.${option.key}`) : month;
@@ -487,6 +496,7 @@ const Payments = () => {
   }, [filtered]);
 
   const remainingAmount = parseFloat(form.total_amount || 0) - parseFloat(form.amount_paid || 0);
+  const computedStatus = !form.amount_paid || !form.total_amount ? 'partial' : parseFloat(form.amount_paid) >= parseFloat(form.total_amount) ? 'completed' : 'partial';
 
   const resetFilters = () => {
     setSearch(''); setFilterStatus(''); setFilterClass('');
@@ -498,7 +508,7 @@ const Payments = () => {
     setForm({
       student_id: '', fee_type_id: '', total_amount: '', amount_paid: '',
       payment_method: 'cash', payment_date: new Date().toISOString().split('T')[0],
-      month_concerned: '', academic_year: getDefaultAcademicYear() || '2024-2025', reference: '', notes: '', status: 'pending',
+      month_concerned: '', academic_year: getDefaultAcademicYear() || '2024-2025', reference: '', notes: '', status: 'partial',
     });
   };
 
@@ -514,7 +524,7 @@ const Payments = () => {
 
   const openFeeTypeModal = () => {
     setEditingFeeType(null);
-    setFeeTypeForm({ name: '', description: '', amount: '', cycle: 'all', is_active: true });
+    setFeeTypeForm({ name: '', description: '', amount: '', cycle: 'all', class_assigned: [], is_active: true });
     setShowFeeTypeModal(true);
   };
 
@@ -525,6 +535,7 @@ const Payments = () => {
       description: feeType.description || '',
       amount: feeType.amount,
       cycle: feeType.cycle,
+      class_assigned: feeType.class_assigned || [],
       is_active: feeType.is_active,
     });
     setShowFeeTypeModal(true);
@@ -541,6 +552,7 @@ const Payments = () => {
         description: feeTypeForm.description,
         amount: parseFloat(feeTypeForm.amount),
         cycle: feeTypeForm.cycle,
+        class_assigned: feeTypeForm.class_assigned,
         is_active: feeTypeForm.is_active,
       };
       if (editingFeeType) {
@@ -550,7 +562,7 @@ const Payments = () => {
       }
       setShowFeeTypeModal(false);
       setEditingFeeType(null);
-      setFeeTypeForm({ name: '', description: '', amount: '', cycle: 'all', is_active: true });
+      setFeeTypeForm({ name: '', description: '', amount: '', cycle: 'all', class_assigned: [], is_active: true });
       const res = await paymentService.getAllFeeTypes();
       setFeeTypes(res.data.results || res.data);
       showModal('success', t('payments.success'), wasEditing ? t('payments.fee_type_updated') : t('payments.fee_type_created'));
@@ -587,7 +599,7 @@ const Payments = () => {
         total_amount: parseFloat(form.total_amount), amount_paid: parseFloat(form.amount_paid),
         payment_method: form.payment_method, payment_date: form.payment_date,
         month_concerned: form.month_concerned, academic_year: form.academic_year,
-        reference: form.reference, notes: form.notes, status: form.status,
+        reference: form.reference, notes: form.notes, status: computedStatus,
       };
       if (editingPayment) {
         await paymentService.update(editingPayment.id, payload);
@@ -616,7 +628,7 @@ const Payments = () => {
         payment_method: p.payment_method || 'cash',
         payment_date: p.payment_date ? p.payment_date.split('T')[0] : new Date().toISOString().split('T')[0],
         month_concerned: p.month_concerned || '', academic_year: p.academic_year || '2024-2025',
-        reference: p.reference || '', notes: p.notes || '', status: p.status || 'pending',
+        reference: p.reference || '', notes: p.notes || '', status: p.status || 'partial',
       });
       if (p.student_id) {
         const stu = students.find(s => s.id === p.student_id);
@@ -642,7 +654,7 @@ const Payments = () => {
   const printReceipt = (payment, additionalAmount) => {
     const printWin = window.open('', '_blank');
     if (!printWin) return;
-    const cfg = statusConfig[payment.status] || statusConfig.pending;
+    const cfg = statusConfig[payment.status] || statusConfig.partial;
     const _t = t;
     printWin.document.write(`
       <html><head><title>${_t('payments.receipt_title')} - ${payment.receipt_number || payment.id}</title>
@@ -823,7 +835,6 @@ const Payments = () => {
               <option value="">{t('payments.select')}</option>
               <option value="completed">{t('payments.status.completed')}</option>
               <option value="partial">{t('payments.status.partial')}</option>
-              <option value="pending">{t('payments.status.pending')}</option>
               <option value="failed">{t('payments.status.failed')}</option>
               <option value="cancelled">{t('payments.status.cancelled')}</option>
             </select>
@@ -897,8 +908,8 @@ const Payments = () => {
                   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
                   const allCompleted = group.payments.every(p => p.status === 'completed');
                   const anyPartial = group.payments.some(p => p.status === 'partial');
-                  const aggStatus = allCompleted ? 'completed' : anyPartial ? 'partial' : group.payments[0]?.status || 'pending';
-                  const aggCfg = statusConfig[aggStatus] || statusConfig.pending;
+                  const aggStatus = allCompleted ? 'completed' : anyPartial ? 'partial' : group.payments[0]?.status || 'partial';
+                  const aggCfg = statusConfig[aggStatus] || statusConfig.partial;
                   const AggStatusIcon = aggCfg.icon;
                   return (
                     <React.Fragment key={group.student_matricule}>
@@ -985,7 +996,7 @@ const Payments = () => {
                         const pPaid = parseFloat(payment.amount_paid || 0);
                         const pRemaining = pTotal - pPaid;
                         const pPct = pTotal > 0 ? Math.round((pPaid / pTotal) * 100) : 0;
-                        const cfg = statusConfig[payment.status] || statusConfig.pending;
+                        const cfg = statusConfig[payment.status] || statusConfig.partial;
                         const StatusIcon = cfg.icon;
                         return (
                           <tr key={payment.id} className="bg-blue-50/30 hover:bg-blue-50/60 transition-colors">
@@ -1136,7 +1147,7 @@ const Payments = () => {
                     <select value={form.fee_type_id} onChange={(e) => handleFeeTypeSelect(parseInt(e.target.value))}
                       className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white" required>
                       <option value="">{t('payments.select')}</option>
-                      {feeTypes.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      {filteredFeeTypes.map((f) => <option key={f.id} value={f.id}>{f.name}{f.class_names?.length ? ` (${f.class_names.join(', ')})` : ''}</option>)}
                     </select>
                   </div>
                   <div>
@@ -1206,12 +1217,9 @@ const Payments = () => {
                 </div>
                 <div>
                   <Label>{t('payments.status_title')}</Label>
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white">
-                    <option value="pending">{t('payments.status.pending')}</option>
-                    <option value="partial">{t('payments.status.partial')}</option>
-                    <option value="completed">{t('payments.status.completed')}</option>
-                  </select>
+                  <div className={`w-full border rounded-lg px-4 py-2.5 text-sm font-semibold ${computedStatus === 'completed' ? 'text-green-700 bg-green-50 border-green-200' : 'text-orange-700 bg-orange-50 border-orange-200'}`}>
+                    {computedStatus === 'completed' ? t('payments.status.completed') : t('payments.status.partial')}
+                  </div>
                 </div>
               </div>
 
@@ -1268,15 +1276,47 @@ const Payments = () => {
                 </div>
                 <div>
                   <Label>{t('payments.fee_type_cycle')}</Label>
-                  <select value={feeTypeForm.cycle} onChange={(e) => setFeeTypeForm({ ...feeTypeForm, cycle: e.target.value })}
+                  <select value={feeTypeForm.cycle} onChange={(e) => setFeeTypeForm({ ...feeTypeForm, cycle: e.target.value, class_assigned: [] })}
                     className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 bg-white">
                     <option value="all">{t('payments.fee_type_cycle_all')}</option>
+                    <option value="prescolaire">{t('payments.fee_type_cycle_prescolaire')}</option>
                     <option value="primaire">{t('payments.fee_type_cycle_primaire')}</option>
                     <option value="college">{t('payments.fee_type_cycle_college')}</option>
                     <option value="lycee">{t('payments.fee_type_cycle_lycee')}</option>
                   </select>
                 </div>
               </div>
+              {feeTypeForm.cycle !== 'all' && (
+                <div>
+                  <Label>{t('payments.fee_type_class')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {classes.filter(c => {
+                      const cname = c.cycle?.name || '';
+                      return cname === feeTypeForm.cycle;
+                    }).map(c => (
+                      <label key={c.id} className={`flex items-center space-x-2 border rounded-lg px-3 py-1.5 cursor-pointer transition-colors ${
+                        feeTypeForm.class_assigned.includes(c.id) ? 'bg-green-50 border-green-300' : 'hover:bg-gray-50'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={feeTypeForm.class_assigned.includes(c.id)}
+                          onChange={() => {
+                            const next = feeTypeForm.class_assigned.includes(c.id)
+                              ? feeTypeForm.class_assigned.filter(id => id !== c.id)
+                              : [...feeTypeForm.class_assigned, c.id];
+                            setFeeTypeForm({ ...feeTypeForm, class_assigned: next });
+                          }}
+                          className="rounded text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-sm">{c.name}</span>
+                      </label>
+                    ))}
+                    {classes.filter(c => (c.cycle?.name || '') === feeTypeForm.cycle).length === 0 && (
+                      <p className="text-xs text-gray-400 italic">{t('payments.no_classes')}</p>
+                    )}
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>{t('payments.fee_type_description')}</Label>
                 <textarea value={feeTypeForm.description}
@@ -1320,6 +1360,9 @@ const Payments = () => {
                           {!ft.is_active && (
                             <span className="text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">{t('payments.fee_type_inactive')}</span>
                           )}
+                          {ft.class_names && ft.class_names.length > 0 && ft.class_names.map((cn, i) => (
+                            <span key={i} className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">{cn}</span>
+                          ))}
                         </div>
                         <div className="text-xs text-gray-500">{parseFloat(ft.amount).toLocaleString()} GNF</div>
                         {ft.description && <div className="text-xs text-gray-400 truncate">{ft.description}</div>}
@@ -1548,7 +1591,7 @@ const Payments = () => {
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 uppercase tracking-wider mb-0.5">{t('payments.status_title')}</div>
-                  {(() => { const c = statusConfig[viewPayment.status] || statusConfig.pending; const Si = c.icon; return (
+                  {(() => { const c = statusConfig[viewPayment.status] || statusConfig.partial; const Si = c.icon; return (
                     <span className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${c.bg}`}>
                       <Si className="w-3.5 h-3.5" />
                       <span>{t(c.label)}</span>
@@ -1575,31 +1618,11 @@ const Payments = () => {
                 </div>
               )}
             </div>
-            <div className="flex justify-between items-center px-6 py-4 border-t bg-gray-50/50">
-              <span className="text-xs text-gray-400">{t('payments.receipt_no')} {viewPayment.receipt_number || 'N/A'}</span>
-              <div className="flex flex-wrap gap-2">
-                {(viewPayment.status === 'partial' || viewPayment.status === 'pending') && (
-                  <button onClick={() => { setPartialPayment(viewPayment); setViewPayment(null); }}
-                    className="flex items-center space-x-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-all">
-                    <DollarSign className="w-4 h-4" />
-                    <span>{t('payments.add_payment')}</span>
-                  </button>
-                )}
-                <button onClick={() => { const p = viewPayment; setViewPayment(null); setTimeout(() => handleEdit(p), 100); }}
-                  className="flex items-center space-x-1.5 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-medium transition-all">
-                  <Pencil className="w-4 h-4" />
-                  <span>{t('payments.edit')}</span>
-                </button>
-                <button onClick={() => printReceipt(viewPayment)}
-                  className="flex items-center space-x-1.5 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-all">
-                  <Printer className="w-4 h-4" />
-                  <span>{t('payments.print')}</span>
-                </button>
-                <button onClick={() => setViewPayment(null)}
-                  className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium transition-all">
-                  {t('payments.close')}
-                </button>
-              </div>
+            <div className="flex justify-end px-6 py-3 border-t bg-gray-50/50">
+              <button onClick={() => setViewPayment(null)}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium transition-all">
+                {t('payments.close')}
+              </button>
             </div>
           </div>
         </div>

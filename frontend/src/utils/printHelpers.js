@@ -13,7 +13,7 @@ export const buildSchoolHeaderHTML = (s) => {
         <div>
           <div style="font-size:20px;font-weight:bold;color:${s.primary_color || '#1e3a5f'};text-transform:uppercase;letter-spacing:1px">${s.name || ''}</div>
           ${s.acronym ? `<div style="font-size:12px;color:#666;margin-top:2px">${s.acronym}</div>` : ''}
-          ${s.address ? `<div style="font-size:11px;color:#888">${s.address}${s.city ? ', ' + s.city : ''}${s.country ? ', ' + s.country : ''}</div>` : ''}
+          ${s.address ? `<div style="font-size:11px;color:#888">${[s.address, s.city && s.city.toLowerCase() !== (s.address || '').toLowerCase() ? s.city : '', s.country].filter(Boolean).join(', ')}</div>` : ''}
           ${s.phone ? `<div style="font-size:11px;color:#888">${s.phone}</div>` : ''}
         </div>
       </div>

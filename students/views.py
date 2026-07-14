@@ -317,14 +317,18 @@ class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     def by_class(self, request):
         class_id = request.query_params.get('class_id')
         if class_id:
+            tenant = get_request_tenant(request)
             students = Student.objects.filter(class_assigned_id=class_id)
+            if tenant:
+                students = students.filter(tenant=tenant)
             serializer = self.get_serializer(students, many=True)
             return Response(serializer.data)
         return Response({'error': 'class_id parameter required'}, status=400)
 
     @action(detail=True, methods=['get'])
     def card_pdf(self, request, pk=None):
-        student = get_object_or_404(Student, pk=pk)
+        tenant = get_request_tenant(request)
+        student = get_object_or_404(Student, pk=pk, tenant=tenant) if tenant else get_object_or_404(Student, pk=pk)
         duplicate = request.query_params.get('duplicate', 'false').lower() == 'true'
 
         CARD_W = 95*mm
@@ -350,7 +354,8 @@ class StudentViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def card(self, request, pk=None):
-        student = get_object_or_404(Student, pk=pk)
+        tenant = get_request_tenant(request)
+        student = get_object_or_404(Student, pk=pk, tenant=tenant) if tenant else get_object_or_404(Student, pk=pk)
         duplicate = request.query_params.get('duplicate', 'false').lower() == 'true'
         from django.template.loader import render_to_string
         html = render_to_string('students/student_card.html', {

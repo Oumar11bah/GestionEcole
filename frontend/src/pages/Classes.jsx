@@ -135,12 +135,13 @@ const Classes = () => {
               <th className="px-6 py-3 font-medium">{t('classes.headerSeries')}</th>
               <th className="px-6 py-3 font-medium">{t('classes.headerAcademicYear')}</th>
               <th className="px-6 py-3 font-medium">{t('classes.headerStudents')}</th>
+              <th className="px-6 py-3 font-medium">{t('classes.headerTeacher')}</th>
               <th className="px-6 py-3 font-medium">{t('classes.headerActions')}</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-500">{t('classes.empty')}</td></tr>
+              <tr><td colSpan="7" className="px-6 py-8 text-center text-gray-500">{t('classes.empty')}</td></tr>
             ) : (
               filtered.map((classe) => {
                 const cycleName = classe.cycle?.name || classe.cycle_name || '';
@@ -170,6 +171,7 @@ const Classes = () => {
                 </td>
                     <td className="px-6 py-4 text-gray-600">{classe.academic_year}</td>
                     <td className="px-6 py-4 text-gray-600">{classe.student_count || 0}</td>
+                    <td className="px-6 py-4 text-gray-600">{classe.class_teacher_name || '--'}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <Link to={`/classes/${classe.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title={t('classes.viewTitle')}><Eye className="w-4 h-4" /></Link>

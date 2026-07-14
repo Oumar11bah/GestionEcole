@@ -20,6 +20,16 @@ class ExpenseViewSet(TenantAwareMixin, viewsets.ModelViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated, CanManageExpenses]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date:
+            qs = qs.filter(expense_date__gte=start_date)
+        if end_date:
+            qs = qs.filter(expense_date__lte=end_date)
+        return qs
+
     def perform_create(self, serializer):
         tenant = self._get_tenant()
         if tenant:

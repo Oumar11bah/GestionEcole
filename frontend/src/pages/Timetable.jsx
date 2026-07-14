@@ -97,6 +97,13 @@ const Timetable = () => {
     if (searchParams.get('action') === 'add') setShowForm(true);
   }, []);
 
+  useEffect(() => {
+    const classIdFromUrl = searchParams.get('class_id');
+    if (classIdFromUrl && classes.length > 0 && !filterClass) {
+      setFilterClass(classIdFromUrl);
+    }
+  }, [searchParams, classes]);
+
   const filteredClasses = useMemo(() => {
     let list = classes;
     if (filterCycle) list = list.filter(c => c.cycle?.id === parseInt(filterCycle) || c.cycle === parseInt(filterCycle));

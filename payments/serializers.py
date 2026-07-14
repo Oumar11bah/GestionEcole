@@ -1,12 +1,19 @@
 from rest_framework import serializers
 from .models import FeeType, Payment, PaymentHistory
 from students.models import Student
+from classes.models import Class
 from django.contrib.auth.models import User
 
 class FeeTypeSerializer(serializers.ModelSerializer):
+    class_names = serializers.SerializerMethodField()
+
     class Meta:
         model = FeeType
-        fields = ['id', 'name', 'description', 'amount', 'cycle', 'is_active', 'tenant']
+        fields = ['id', 'name', 'description', 'amount', 'cycle', 'class_assigned', 'class_names', 'is_active', 'tenant']
+        read_only_fields = ['tenant']
+
+    def get_class_names(self, obj):
+        return [str(c) for c in obj.class_assigned.all()]
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
     received_by = serializers.StringRelatedField(read_only=True)
@@ -31,10 +38,10 @@ class PaymentSerializer(serializers.ModelSerializer):
     student = serializers.SerializerMethodField()
     student_matricule = serializers.SerializerMethodField()
     student_photo_url = serializers.SerializerMethodField()
-    student_id = serializers.IntegerField(write_only=True)
+    student_id = serializers.IntegerField()
     fee_type = serializers.StringRelatedField(read_only=True)
     fee_type_amount = serializers.SerializerMethodField()
-    fee_type_id = serializers.IntegerField(write_only=True)
+    fee_type_id = serializers.IntegerField()
     received_by = serializers.StringRelatedField(read_only=True)
     received_by_id = serializers.IntegerField(write_only=True, required=False)
     remaining_amount = serializers.SerializerMethodField(read_only=True)
@@ -75,8 +82,12 @@ class PaymentSerializer(serializers.ModelSerializer):
         return float(obj.total_amount) - float(obj.amount_paid)
 
     def create(self, validated_data):
+        tenant = self.context['request'].user.profile.tenant if hasattr(self.context.get('request', None), 'user') and hasattr(self.context['request'].user, 'profile') else None
         validated_data['student'] = Student.objects.get(id=validated_data.pop('student_id'))
-        validated_data['fee_type'] = FeeType.objects.get(id=validated_data.pop('fee_type_id'))
+        fee_type_lookup = {'id': validated_data.pop('fee_type_id')}
+        if tenant:
+            fee_type_lookup['tenant'] = tenant
+        validated_data['fee_type'] = FeeType.objects.get(**fee_type_lookup)
         if 'received_by_id' in validated_data:
             validated_data['received_by'] = User.objects.get(id=validated_data.pop('received_by_id'))
         payment = super().create(validated_data)

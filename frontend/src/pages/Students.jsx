@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Eye, Pencil, Trash2, CreditCard, Printer, UserPlus } from 'lucide-react';
 import { studentService, classService, cycleService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,8 @@ import MessageModal from '../components/MessageModal';
 const Students = () => {
   const { t } = useTranslation();
   const { canAccess } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlClassId = searchParams.get('class_id');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,9 +27,22 @@ const Students = () => {
   useEffect(() => {
     fetchStudents();
     fetchCycles();
-    fetchClasses();
+    fetchClasses().then(() => {
+      if (urlClassId) {
+        fetchStudents();
+      }
+    });
     fetchAcademicYears().then(setYears);
   }, []);
+
+  useEffect(() => {
+    if (urlClassId && classes.length > 0) {
+      const found = classes.find((c) => String(c.id) === String(urlClassId));
+      if (found) {
+        setFilterClass(found.name);
+      }
+    }
+  }, [urlClassId, classes]);
 
   const fetchStudents = async () => {
     try {

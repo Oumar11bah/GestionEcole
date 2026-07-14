@@ -9,7 +9,7 @@ from accounts.permissions import CanManageClasses
 from accounts.utils import TenantAwareMixin
 
 class SubjectViewSet(TenantAwareMixin, viewsets.ModelViewSet):
-    queryset = Subject.objects.prefetch_related('cycle').all()
+    queryset = Subject.objects.prefetch_related('cycle', 'teacher_assignments__teacher', 'teacher_assignments__class_assigned').select_related('teacher').all()
     serializer_class = SubjectSerializer
     permission_classes = [IsAuthenticated, CanManageClasses]
 

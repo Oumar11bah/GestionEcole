@@ -28,6 +28,7 @@ class ParentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parent
         fields = ['id', 'full_name', 'phone_number', 'email', 'address', 'quartier', 'commune', 'city', 'country', 'profession', 'tenant']
+        read_only_fields = ['tenant']
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -53,6 +54,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'parent_full_name', 'parent_phone_number', 'parent_profession', 'parent_quartier',
             'academic_year', 'enrollment_date', 'tenant', 'created_at', 'updated_at',
         ]
+        read_only_fields = ['tenant']
 
     def get_class_assigned_name(self, obj):
         if obj.class_assigned:
@@ -98,14 +100,20 @@ class StudentSerializer(serializers.ModelSerializer):
                     'La classe sélectionnée n\'existe plus. Rechargez la page et réessayez.'
                 )
         
+        tenant = self.context['request'].user.profile.tenant if hasattr(self.context.get('request', None), 'user') and hasattr(self.context['request'].user, 'profile') else None
+
         if parent_full_name and parent_phone_number:
+            lookup = {'full_name': parent_full_name, 'phone_number': parent_phone_number}
+            defaults = {
+                'quartier': parent_quartier or '',
+                'profession': parent_profession or ''
+            }
+            if tenant:
+                lookup['tenant'] = tenant
+                defaults['tenant'] = tenant
             parent, created = Parent.objects.get_or_create(
-                full_name=parent_full_name,
-                phone_number=parent_phone_number,
-                defaults={
-                    'quartier': parent_quartier or '',
-                    'profession': parent_profession or ''
-                }
+                **lookup,
+                defaults=defaults
             )
             if not created:
                 if parent_quartier:
@@ -141,14 +149,20 @@ class StudentSerializer(serializers.ModelSerializer):
                     'La classe sélectionnée n\'existe plus. Rechargez la page et réessayez.'
                 )
         
+        tenant = self.context['request'].user.profile.tenant if hasattr(self.context.get('request', None), 'user') and hasattr(self.context['request'].user, 'profile') else None
+
         if parent_full_name and parent_phone_number:
+            lookup = {'full_name': parent_full_name, 'phone_number': parent_phone_number}
+            defaults = {
+                'quartier': parent_quartier or '',
+                'profession': parent_profession or ''
+            }
+            if tenant:
+                lookup['tenant'] = tenant
+                defaults['tenant'] = tenant
             parent, created = Parent.objects.get_or_create(
-                full_name=parent_full_name,
-                phone_number=parent_phone_number,
-                defaults={
-                    'quartier': parent_quartier or '',
-                    'profession': parent_profession or ''
-                }
+                **lookup,
+                defaults=defaults
             )
             if not created:
                 if parent_quartier:

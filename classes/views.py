@@ -104,8 +104,12 @@ class ScheduleEntryViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         if start_time >= end_time:
             return Response({'available': False, 'errors': ["L'heure de fin doit être après l'heure de début"]})
 
+        tenant = get_request_tenant(request)
+
         if room:
             room_qs = ScheduleEntry.objects.filter(day=day, room=room)
+            if tenant:
+                room_qs = room_qs.filter(tenant=tenant)
             if exclude_id:
                 room_qs = room_qs.exclude(id=exclude_id)
             for entry in room_qs:
@@ -119,6 +123,8 @@ class ScheduleEntryViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
         if teacher_name:
             teacher_qs = ScheduleEntry.objects.filter(day=day, teacher_name=teacher_name)
+            if tenant:
+                teacher_qs = teacher_qs.filter(tenant=tenant)
             if exclude_id:
                 teacher_qs = teacher_qs.exclude(id=exclude_id)
             for entry in teacher_qs:
@@ -132,6 +138,8 @@ class ScheduleEntryViewSet(TenantAwareMixin, viewsets.ModelViewSet):
 
         if class_assigned_id:
             class_qs = ScheduleEntry.objects.filter(day=day, class_assigned_id=class_assigned_id)
+            if tenant:
+                class_qs = class_qs.filter(tenant=tenant)
             if exclude_id:
                 class_qs = class_qs.exclude(id=exclude_id)
             for entry in class_qs:
@@ -161,16 +169,27 @@ class ScheduleEntryViewSet(TenantAwareMixin, viewsets.ModelViewSet):
         if not day:
             return Response({'slots': []})
 
+        tenant = get_request_tenant(request)
+
         busy_ranges = []
 
         if room:
-            for e in ScheduleEntry.objects.filter(day=day, room=room).exclude(id=exclude_id):
+            room_qs = ScheduleEntry.objects.filter(day=day, room=room)
+            if tenant:
+                room_qs = room_qs.filter(tenant=tenant)
+            for e in room_qs.exclude(id=exclude_id):
                 busy_ranges.append((e.start_time, e.end_time, 'room'))
         if teacher_name:
-            for e in ScheduleEntry.objects.filter(day=day, teacher_name=teacher_name).exclude(id=exclude_id):
+            teacher_qs = ScheduleEntry.objects.filter(day=day, teacher_name=teacher_name)
+            if tenant:
+                teacher_qs = teacher_qs.filter(tenant=tenant)
+            for e in teacher_qs.exclude(id=exclude_id):
                 busy_ranges.append((e.start_time, e.end_time, 'teacher'))
         if class_assigned_id:
-            for e in ScheduleEntry.objects.filter(day=day, class_assigned_id=class_assigned_id).exclude(id=exclude_id):
+            class_qs = ScheduleEntry.objects.filter(day=day, class_assigned_id=class_assigned_id)
+            if tenant:
+                class_qs = class_qs.filter(tenant=tenant)
+            for e in class_qs.exclude(id=exclude_id):
                 busy_ranges.append((e.start_time, e.end_time, 'class'))
 
         busy_ranges.sort()

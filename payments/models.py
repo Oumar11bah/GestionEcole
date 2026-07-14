@@ -1,5 +1,6 @@
 from django.db import models
 from students.models import Student
+from classes.models import Class
 from django.contrib.auth.models import User
 from tenants.models import Tenant
 
@@ -8,11 +9,13 @@ class FeeType(models.Model):
     description = models.TextField(blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     cycle = models.CharField(max_length=20, choices=[
+        ('all', 'Tous'),
+        ('prescolaire', 'Préscolaire'),
         ('primaire', 'Primaire'),
         ('college', 'Collège'),
         ('lycee', 'Lycée'),
-        ('all', 'Tous'),
     ], default='all')
+    class_assigned = models.ManyToManyField(Class, blank=True, related_name='fee_types', verbose_name='Classes concernées')
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -21,7 +24,6 @@ class FeeType(models.Model):
 
 class Payment(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'En attente'),
         ('partial', 'Partiel'),
         ('completed', 'Payé'),
         ('failed', 'Échoué'),
@@ -62,10 +64,8 @@ class Payment(models.Model):
         if not self.status:
             if self.amount_paid >= self.total_amount:
                 self.status = 'completed'
-            elif self.amount_paid > 0:
-                self.status = 'partial'
             else:
-                self.status = 'pending'
+                self.status = 'partial'
         super().save(*args, **kwargs)
 
 class PaymentHistory(models.Model):

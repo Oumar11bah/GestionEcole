@@ -125,8 +125,11 @@ class StudentAverage(models.Model):
         return round(average, 2)
 
     @classmethod
-    def update_rankings(cls, term):
-        averages = cls.objects.filter(term=term).order_by('-average')
+    def update_rankings(cls, term, tenant=None):
+        averages = cls.objects.filter(term=term)
+        if tenant:
+            averages = averages.filter(tenant=tenant)
+        averages = averages.order_by('-average')
         for rank, avg in enumerate(averages, start=1):
             cls.objects.filter(id=avg.id).update(rank=rank)
 
@@ -150,13 +153,17 @@ class GradeHistory(models.Model):
 def update_student_average(sender, instance, **kwargs):
     student = instance.student
     term = instance.term
+    tenant = instance.tenant
     average = StudentAverage.calculate_average(student, term)
     if average is not None:
+        defaults = {'average': average}
+        if tenant:
+            defaults['tenant'] = tenant
         StudentAverage.objects.update_or_create(
             student=student,
             term=term,
-            defaults={'average': average}
+            defaults=defaults
         )
     else:
         StudentAverage.objects.filter(student=student, term=term).delete()
-    StudentAverage.update_rankings(term)
+    StudentAverage.update_rankings(term, tenant=tenant)

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { BarChart3, Users, CreditCard, Calendar, Download, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { BarChart3, Users, CreditCard, Calendar, Download, Clock, Trash2, AlertTriangle, Receipt } from 'lucide-react';
 import MessageModal from '../components/MessageModal';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { studentService, paymentService, attendanceService, gradeService, activityService, classService, schoolService } from '../services/api';
+import { studentService, paymentService, attendanceService, gradeService, activityService, classService, schoolService, expenseService } from '../services/api';
 
 const MODEL_KEYS = {
   Student: 'reports.student', Payment: 'reports.payment', Attendance: 'reports.attendance',
@@ -30,11 +30,14 @@ const Reports = () => {
   const [classes, setClasses] = useState([]);
   const [filterClass, setFilterClass] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const [schoolInfo, setSchoolInfo] = useState(null);
 
   const reportOptions = [
     { id: 'students', label: t('reports.studentsStats'), icon: Users },
     { id: 'payments', label: t('reports.financialReport'), icon: CreditCard },
+    { id: 'expenses', label: t('reports.expensesReport'), icon: Receipt },
     { id: 'attendance', label: t('reports.attendanceReport'), icon: Calendar },
     { id: 'grades', label: t('reports.gradesReport'), icon: BarChart3 },
     { id: 'activity', label: t('reports.activityHistory'), icon: Clock },
@@ -44,6 +47,8 @@ const Reports = () => {
     setData(null);
     setRawData(null);
     setFilterDate('');
+    setFilterStartDate('');
+    setFilterEndDate('');
     fetchReport();
     schoolService.get().then((res) => setSchoolInfo(res.data)).catch(() => {});
     if (reportType === 'grades') {
@@ -63,6 +68,10 @@ const Reports = () => {
   useEffect(() => {
     if (reportType === 'attendance' && filterDate) fetchReport();
   }, [filterDate]);
+
+  useEffect(() => {
+    if (reportType === 'expenses') fetchReport();
+  }, [filterStartDate, filterEndDate]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -158,6 +167,24 @@ const Reports = () => {
           break;
         }
 
+        case 'expenses': {
+          const expParams = {};
+          if (filterStartDate) expParams.start_date = filterStartDate;
+          if (filterEndDate) expParams.end_date = filterEndDate;
+          response = await expenseService.getAll(expParams);
+          const expenses = Array.isArray(response.data?.results) ? response.data.results : Array.isArray(response.data) ? response.data : [];
+          setRawData(expenses);
+          const byCategory = {};
+          let totalExpenses = 0;
+          expenses.forEach((e) => {
+            const cat = e.category_name || t('reports.unknown');
+            byCategory[cat] = (byCategory[cat] || 0) + parseFloat(e.amount || 0);
+            totalExpenses += parseFloat(e.amount || 0);
+          });
+          setData({ total: expenses.length, totalExpenses, byCategory });
+          break;
+        }
+
         default:
           break;
       }
@@ -181,6 +208,7 @@ const Reports = () => {
     const titles = {
       students: t('reports.pdfStudentStats'),
       payments: t('reports.pdfFinancialReport'),
+      expenses: t('reports.pdfExpensesReport'),
       attendance: t('reports.pdfAttendance'),
       grades: t('reports.pdfGrades'),
       activity: t('reports.pdfActivity'),
@@ -450,6 +478,62 @@ const Reports = () => {
       });
     }
 
+    else if (reportType === 'expenses') {
+      doc.setFillColor(254, 243, 199);
+      doc.roundedRect(14, startY, pageWidth - 28, 16, 3, 3, 'F');
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(202, 138, 4);
+      const totalDisplay = String(Math.round(data?.totalExpenses || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      doc.text(`${t('reports.totalExpenses')}: ${totalDisplay} GNF`, 20, startY + 11);
+      doc.setTextColor(0, 0, 0);
+
+      const catRows = Object.entries(data?.byCategory || {}).map(([cat, amount]) => [
+        cat,
+        `${String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} GNF`,
+      ]);
+      autoTable(doc, {
+        startY: startY + 22,
+        head: [[t('reports.category'), t('reports.amount')]],
+        body: catRows,
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 },
+        margin: { left: 14, right: 14 },
+      });
+
+      const expStart = doc.lastAutoTable.finalY + 8;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(t('reports.expenseDetails'), 14, expStart);
+
+      const expRows = rawData
+        .slice().sort((a, b) => new Date(b.expense_date || b.created_at) - new Date(a.expense_date || a.created_at))
+        .map((e) => [
+        e.category_name || '',
+        e.description || '',
+        `${String(Math.round(parseFloat(e.amount || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} GNF`,
+        e.payment_method === 'cash' ? t('reports.cash') : e.payment_method === 'mobile_money' ? t('reports.mobileMoney') : e.payment_method === 'bank_transfer' ? t('reports.bankTransfer') : e.payment_method || '',
+        e.expense_date || '',
+      ]);
+      autoTable(doc, {
+        startY: expStart + 3,
+        head: [[t('reports.category'), t('reports.description'), t('reports.amount'), t('reports.method'), t('reports.date')]],
+        body: expRows,
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235], fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 55 },
+          2: { cellWidth: 28, halign: 'right' },
+          3: { cellWidth: 28 },
+          4: { cellWidth: 22 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+    }
+
     doc.setFillColor(243, 244, 246);
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
@@ -461,6 +545,7 @@ const Reports = () => {
     const filenames = {
       students: 'Statistiques_eleves',
       payments: 'Rapport_financier',
+      expenses: 'Rapport_depenses',
       attendance: 'Rapport_absences',
       grades: 'Resultats_academiques',
       activity: 'Historique_activites',
@@ -516,6 +601,23 @@ const Reports = () => {
           )}
           {reportType === 'payments' && (
             <PaymentsReport data={data} rawData={rawData} />
+          )}
+          {reportType === 'expenses' && (
+            <div>
+              <div className="mb-4 flex items-center gap-4 flex-wrap">
+                <label className="text-sm font-medium text-gray-700">{t('reports.from')}</label>
+                <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)}
+                  className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="text-sm font-medium text-gray-700">{t('reports.to')}</label>
+                <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)}
+                  className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                {(filterStartDate || filterEndDate) && (
+                  <button onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }}
+                    className="text-sm text-red-600 hover:text-red-800 font-medium">{t('reports.clearFilter')}</button>
+                )}
+              </div>
+              <ExpensesReport data={data} rawData={rawData} />
+            </div>
           )}
           {reportType === 'attendance' && (
             <div>
@@ -741,6 +843,58 @@ const GradesReport = ({ data, rawData }) => {
                   <td className="px-3 py-2 font-semibold text-blue-600">{a.average}/{maxScore}</td>
                   <td className="px-3 py-2 text-sm text-gray-600">#{a.rank || '\u2014'}</td>
                   <td className="px-3 py-2 text-gray-500">{a.calculated_at ? new Date(a.calculated_at).toLocaleDateString('fr-FR') : '\u2014'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ExpensesReport = ({ data, rawData }) => {
+  const { t } = useTranslation();
+  const byCategory = data?.byCategory || {};
+  const totalExpenses = data?.totalExpenses || 0;
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('reports.expensesReport')}</h3>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+        <Stat label={t('reports.totalExpenses')} value={`${totalExpenses.toLocaleString()} GNF`} />
+        <Stat label={t('reports.totalTransactions')} value={data.total || 0} />
+        <Stat label={t('reports.categories')} value={Object.keys(byCategory).length || 0} />
+      </div>
+      <h4 className="font-medium text-gray-700 mb-2">{t('reports.byCategory')}</h4>
+      <div className="space-y-2">
+        {Object.entries(byCategory).map(([cat, amount]) => (
+          <div key={cat} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <span className="text-gray-700">{cat}</span>
+            <span className="font-bold text-amber-600">{amount.toLocaleString()} GNF</span>
+          </div>
+        ))}
+      </div>
+      {rawData?.length > 0 && (
+        <div className="mt-6 overflow-x-auto">
+          <h4 className="font-medium text-gray-700 mb-2">{t('reports.expenseDetails')}</h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b bg-gray-50">
+                <th className="px-3 py-2 font-medium">{t('reports.category')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.description')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.amount')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.method')}</th>
+                <th className="px-3 py-2 font-medium">{t('reports.date')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawData.map((e) => (
+                <tr key={e.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2 text-gray-600">{e.category_name || '\u2014'}</td>
+                  <td className="px-3 py-2 text-gray-900">{e.description || '\u2014'}</td>
+                  <td className="px-3 py-2 font-semibold text-amber-600">{parseFloat(e.amount || 0).toLocaleString()} GNF</td>
+                  <td className="px-3 py-2 text-gray-500">{e.payment_method === 'cash' ? t('reports.cash') : e.payment_method === 'mobile_money' ? t('reports.mobileMoney') : e.payment_method === 'bank_transfer' ? t('reports.bankTransfer') : e.payment_method || '\u2014'}</td>
+                  <td className="px-3 py-2 text-gray-500">{e.expense_date ? new Date(e.expense_date).toLocaleDateString('fr-FR') : '\u2014'}</td>
                 </tr>
               ))}
             </tbody>

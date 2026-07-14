@@ -693,7 +693,7 @@ const Grades = () => {
                         const locked = tsId ? isGradeLocked(sa.student.id, tsId) : false;
                         const key = tsId ? `${sa.student.id}-${tsId}` : null;
                         const err = key ? errors[key] : null;
-                        const disabled = locked && !isAdmin;
+                        const disabled = locked;
                         return (
                           <td key={s.id} className="px-0.5 py-0.5 text-center border-r border-gray-100 relative group w-[65px]">
                             {tsId ? (
@@ -714,7 +714,7 @@ const Grades = () => {
                                 {locked && (
                                   <button
                                     onClick={() => handleToggleLock(sa.student.id, tsId)}
-                                    className={`absolute -top-1 -right-1 p-0.5 rounded-full ${isAdmin ? 'opacity-0 group-hover:opacity-100' : ''} ${isAdmin ? 'hover:bg-yellow-100' : ''} transition-opacity`}
+                                    className="absolute -top-1 -right-1 p-0.5 rounded-full hover:bg-yellow-100 transition-opacity"
                                     title={locked ? t('grades.locked') : t('grades.unlocked')}
                                   >
                                     <Lock className={`w-3 h-3 ${isAdmin ? 'text-yellow-500' : 'text-gray-300'}`} />

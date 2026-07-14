@@ -7,7 +7,7 @@ from django.db.models.functions import TruncMonth
 from .models import Statistic, ActivityLog
 from .serializers import StatisticSerializer, ActivityLogSerializer
 from accounts.permissions import CanViewActivity, IsAdminOrSuperAdmin, RoleBasedPermission
-from accounts.utils import get_user_role
+from accounts.utils import get_user_role, get_request_tenant
 from students.models import Student
 from payments.models import Payment
 from expenses.models import Expense
@@ -27,7 +27,11 @@ class StatisticViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if get_user_role(self.request.user) == 'super_admin':
             return Statistic.objects.none()
-        return super().get_queryset()
+        qs = super().get_queryset()
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            qs = qs.filter(tenant=tenant)
+        return qs
 
 
 class ActivityLogViewSet(viewsets.ModelViewSet):
@@ -38,7 +42,11 @@ class ActivityLogViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if get_user_role(self.request.user) == 'super_admin':
             return ActivityLog.objects.none()
-        return super().get_queryset()
+        qs = super().get_queryset()
+        tenant = get_request_tenant(self.request)
+        if tenant:
+            qs = qs.filter(tenant=tenant)
+        return qs
 
     @action(detail=False, methods=['post'])
     def clear_all(self, request):
@@ -127,6 +135,11 @@ class DashboardViewSet(viewsets.ViewSet):
         months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec']
         for i, month_name in enumerate(months[:6]):
             month_num = i + 1
+            prescolaire_count = Student.objects.filter(
+                class_assigned__cycle__name='prescolaire',
+                enrollment_date__month__lte=month_num,
+                **tenant_filter
+            ).count()
             primary_count = Student.objects.filter(
                 class_assigned__cycle__name='primaire',
                 enrollment_date__month__lte=month_num,
@@ -144,6 +157,7 @@ class DashboardViewSet(viewsets.ViewSet):
             ).count()
             enrollment_trend.append({
                 'mois': month_name,
+                'prescolaire': prescolaire_count,
                 'primaire': primary_count,
                 'college': college_count,
                 'lycee': lycee_count,

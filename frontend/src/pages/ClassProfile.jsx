@@ -94,7 +94,7 @@ const ClassProfile = () => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">{t('classProfile.infoTeacher')}</span>
-              <span className="font-medium">{classe.class_teacher || t('classProfile.notAssigned')}</span>
+              <span className="font-medium">{classe.class_teacher_name || t('classProfile.notAssigned')}</span>
             </div>
           </div>
         </div>

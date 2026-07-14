@@ -18,6 +18,7 @@ class SalaryHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryHistory
         fields = ['id', 'teacher', 'amount', 'month', 'paid_date', 'is_paid', 'notes', 'tenant', 'created_at']
+        read_only_fields = ['tenant']
 
 class TeacherSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False, allow_null=True)
@@ -33,6 +34,7 @@ class TeacherSerializer(serializers.ModelSerializer):
                   'salary', 'is_active', 'tenant',
                   'teacher_subjects', 'salary_history',
                   'created_at', 'updated_at']
+        read_only_fields = ['tenant']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
