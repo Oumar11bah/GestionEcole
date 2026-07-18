@@ -1,5 +1,6 @@
 import secrets
 import string
+from django.db import transaction, connection
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -21,6 +22,99 @@ class TenantViewSet(viewsets.ModelViewSet):
         if self.action in ['register', 'check_subdomain']:
             return [AllowAny()]
         return [IsAuthenticated(), IsSuperAdmin()]
+
+    def perform_destroy(self, instance):
+        with transaction.atomic():
+            tenant_id = int(instance.id)
+            cursor = connection.cursor()
+
+            user_ids = [
+                r[0] for r in cursor.execute(
+                    f"SELECT u.id FROM auth_user u INNER JOIN accounts_userprofile p ON p.user_id = u.id WHERE p.tenant_id = {tenant_id}"
+                ).fetchall()
+            ]
+
+            def _in_clause(ids):
+                return ','.join(str(int(i)) for i in ids) if ids else '0'
+
+            # 1. PaymentHistory (depends on Payment)
+            payment_ids = [r[0] for r in cursor.execute(
+                f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}").fetchall()]
+            if payment_ids:
+                cursor.execute(f"DELETE FROM payments_paymenthistory WHERE payment_id IN ({_in_clause(payment_ids)})")
+                cursor.execute(f"DELETE FROM mobile_payments_mobilepaymenttransaction WHERE payment_id IN ({_in_clause(payment_ids)})")
+
+            # 2. Student dependents (before deleting students)
+            student_ids = [r[0] for r in cursor.execute(
+                f"SELECT id FROM students_student WHERE tenant_id = {tenant_id}").fetchall()]
+            if student_ids:
+                cursor.execute(f"DELETE FROM grades_gradehistory WHERE grade_id IN (SELECT id FROM grades_grade WHERE student_id IN ({_in_clause(student_ids)}))")
+                cursor.execute(f"DELETE FROM grades_studentaverage WHERE student_id IN ({_in_clause(student_ids)})")
+                cursor.execute(f"DELETE FROM attendance_attendance WHERE student_id IN ({_in_clause(student_ids)})")
+                cursor.execute(f"DELETE FROM communication_notification WHERE related_student_id IN ({_in_clause(student_ids)})")
+
+            # 3. Teacher dependents (before deleting teachers)
+            teacher_ids = [r[0] for r in cursor.execute(
+                f"SELECT id FROM teachers_teacher WHERE tenant_id = {tenant_id}").fetchall()]
+            if teacher_ids:
+                cursor.execute(f"DELETE FROM teachers_salaryhistory WHERE teacher_id IN ({_in_clause(teacher_ids)})")
+
+            # 4. Class dependents (before deleting classes)
+            class_ids = [r[0] for r in cursor.execute(
+                f"SELECT id FROM classes_class WHERE tenant_id = {tenant_id}").fetchall()]
+            if class_ids:
+                cursor.execute(f"DELETE FROM payments_feetype_class_assigned WHERE class_id IN ({_in_clause(class_ids)})")
+
+            # 5. Term dependents
+            term_ids = [r[0] for r in cursor.execute(
+                f"SELECT id FROM grades_term WHERE tenant_id = {tenant_id}").fetchall()]
+            if term_ids:
+                cursor.execute(f"DELETE FROM results_classresult WHERE term_id IN ({_in_clause(term_ids)})")
+
+            # 6. Now delete core tables (safe order)
+            cursor.execute(f"DELETE FROM payments_payment WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM grades_grade WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM grades_gradehistory WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM grades_studentaverage WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM communication_notification WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM communication_message WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM expenses_expense WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM expenses_expensecategory WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM registrations_registration WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM students_parent WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM students_student WHERE tenant_id = {tenant_id}")
+
+            cursor.execute(f"DELETE FROM subjects_teachersubject WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM subjects_subject_cycle WHERE subject_id IN (SELECT id FROM subjects_subject WHERE tenant_id = {tenant_id})")
+            cursor.execute(f"DELETE FROM subjects_subject WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM classes_scheduleentry WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM classes_class WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM classes_cycle WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM rooms_room WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM teachers_teacher WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM payments_feetype WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM grades_term WHERE tenant_id = {tenant_id}")
+
+            # 7. School
+            cursor.execute(f"DELETE FROM school_semester WHERE academic_year_id IN (SELECT id FROM school_academicyear WHERE tenant_id = {tenant_id})")
+            cursor.execute(f"DELETE FROM school_academicyear WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM school_schoolinfo WHERE tenant_id = {tenant_id}")
+
+            # 8. Dashboard, Accounts
+            cursor.execute(f"DELETE FROM dashboard_statistic WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM dashboard_activitylog WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_activitylog WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_loginattempt WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_loginlockout WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_role WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_userprofile WHERE tenant_id = {tenant_id}")
+
+            # 9. Users and tenant
+            cursor.execute(f"UPDATE tenants_tenant SET created_by_id = NULL WHERE id = {tenant_id}")
+            if user_ids:
+                cursor.execute(f"DELETE FROM auth_user WHERE id IN ({_in_clause(user_ids)})")
+
+            cursor.execute(f"DELETE FROM tenants_tenant WHERE id = {tenant_id}")
 
     def get_serializer_class(self):
         if self.action == 'register':
