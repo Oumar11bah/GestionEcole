@@ -32,48 +32,44 @@ class TenantViewSet(viewsets.ModelViewSet):
         logger.info(f"Deleting tenant {tenant_id} ({instance.name})")
         try:
             cursor = connection.cursor()
-            try:
-                cursor.execute("PRAGMA foreign_keys = OFF")
-            except Exception:
-                pass
 
-            cursor.execute(
-                f"SELECT u.id FROM auth_user u INNER JOIN accounts_userprofile p ON p.user_id = u.id WHERE p.tenant_id = {tenant_id}"
-            )
-            user_ids = [r[0] for r in cursor.fetchall()]
-
-            def _in_clause(ids):
+            def _in(ids):
                 return ','.join(str(int(i)) for i in ids) if ids else '0'
 
-            cursor.execute(f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}")
-            payment_ids = [r[0] for r in cursor.fetchall()]
+            def fetch(sql):
+                cursor.execute(sql)
+                return [r[0] for r in cursor.fetchall()]
+
+            user_ids = fetch(
+                f"SELECT user_id FROM accounts_userprofile WHERE tenant_id = {tenant_id}"
+            )
+            ucl = _in(user_ids) if user_ids else '0'
+
+            payment_ids = fetch(f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}")
             if payment_ids:
-                cursor.execute(f"DELETE FROM payments_paymenthistory WHERE payment_id IN ({_in_clause(payment_ids)})")
-                cursor.execute(f"DELETE FROM mobile_payments_mobilepaymenttransaction WHERE payment_id IN ({_in_clause(payment_ids)})")
+                cursor.execute(f"DELETE FROM payments_paymenthistory WHERE payment_id IN ({_in(payment_ids)})")
+                cursor.execute(f"DELETE FROM mobile_payments_mobilepaymenttransaction WHERE payment_id IN ({_in(payment_ids)})")
 
-            cursor.execute(f"SELECT id FROM students_student WHERE tenant_id = {tenant_id}")
-            student_ids = [r[0] for r in cursor.fetchall()]
+            student_ids = fetch(f"SELECT id FROM students_student WHERE tenant_id = {tenant_id}")
             if student_ids:
-                cursor.execute(f"DELETE FROM grades_gradehistory WHERE grade_id IN (SELECT id FROM grades_grade WHERE student_id IN ({_in_clause(student_ids)}))")
-                cursor.execute(f"DELETE FROM grades_studentaverage WHERE student_id IN ({_in_clause(student_ids)})")
-                cursor.execute(f"DELETE FROM attendance_attendance WHERE student_id IN ({_in_clause(student_ids)})")
-                cursor.execute(f"DELETE FROM communication_notification WHERE related_student_id IN ({_in_clause(student_ids)})")
+                cursor.execute(f"DELETE FROM grades_gradehistory WHERE grade_id IN (SELECT id FROM grades_grade WHERE student_id IN ({_in(student_ids)}))")
+                cursor.execute(f"DELETE FROM grades_studentaverage WHERE student_id IN ({_in(student_ids)})")
+                cursor.execute(f"DELETE FROM attendance_attendance WHERE student_id IN ({_in(student_ids)})")
+                cursor.execute(f"DELETE FROM communication_notification WHERE related_student_id IN ({_in(student_ids)})")
 
-            cursor.execute(f"SELECT id FROM teachers_teacher WHERE tenant_id = {tenant_id}")
-            teacher_ids = [r[0] for r in cursor.fetchall()]
+            teacher_ids = fetch(f"SELECT id FROM teachers_teacher WHERE tenant_id = {tenant_id}")
             if teacher_ids:
-                cursor.execute(f"DELETE FROM teachers_salaryhistory WHERE teacher_id IN ({_in_clause(teacher_ids)})")
+                cursor.execute(f"DELETE FROM teachers_salaryhistory WHERE teacher_id IN ({_in(teacher_ids)})")
 
-            cursor.execute(f"SELECT id FROM classes_class WHERE tenant_id = {tenant_id}")
-            class_ids = [r[0] for r in cursor.fetchall()]
+            class_ids = fetch(f"SELECT id FROM classes_class WHERE tenant_id = {tenant_id}")
             if class_ids:
-                cursor.execute(f"DELETE FROM payments_feetype_class_assigned WHERE class_id IN ({_in_clause(class_ids)})")
+                cursor.execute(f"DELETE FROM payments_feetype_class_assigned WHERE class_id IN ({_in(class_ids)})")
 
-            cursor.execute(f"SELECT id FROM grades_term WHERE tenant_id = {tenant_id}")
-            term_ids = [r[0] for r in cursor.fetchall()]
+            term_ids = fetch(f"SELECT id FROM grades_term WHERE tenant_id = {tenant_id}")
             if term_ids:
-                cursor.execute(f"DELETE FROM results_classresult WHERE term_id IN ({_in_clause(term_ids)})")
+                cursor.execute(f"DELETE FROM results_classresult WHERE term_id IN ({_in(term_ids)})")
 
+            # Core data by tenant_id
             cursor.execute(f"DELETE FROM payments_payment WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM grades_grade WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM grades_gradehistory WHERE tenant_id = {tenant_id}")
@@ -102,27 +98,29 @@ class TenantViewSet(viewsets.ModelViewSet):
             cursor.execute(f"DELETE FROM school_schoolinfo WHERE tenant_id = {tenant_id}")
 
             cursor.execute(f"DELETE FROM dashboard_statistic WHERE tenant_id = {tenant_id}")
-            cursor.execute(f"DELETE FROM dashboard_activitylog WHERE tenant_id = {tenant_id}")
-            cursor.execute(f"DELETE FROM accounts_activitylog WHERE tenant_id = {tenant_id}")
-            cursor.execute(f"DELETE FROM accounts_loginattempt WHERE tenant_id = {tenant_id}")
-            cursor.execute(f"DELETE FROM accounts_loginlockout WHERE tenant_id = {tenant_id}")
+
+            # Cascade-clean ALL rows referencing our users BEFORE deleting users
+            if user_ids:
+                cursor.execute(f"DELETE FROM accounts_activitylog WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM accounts_loginattempt WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM accounts_loginlockout WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM dashboard_activitylog WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM communication_message WHERE sender_id IN ({ucl}) OR recipient_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM communication_notification WHERE recipient_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM django_admin_log WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM auth_user_groups WHERE user_id IN ({ucl})")
+                cursor.execute(f"DELETE FROM auth_user_user_permissions WHERE user_id IN ({ucl})")
+
+            # Tenant-owned account tables
             cursor.execute(f"DELETE FROM accounts_role WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM accounts_userprofile WHERE tenant_id = {tenant_id}")
 
+            # Nullify FK then delete users
             cursor.execute(f"UPDATE tenants_tenant SET created_by_id = NULL WHERE id = {tenant_id}")
             if user_ids:
-                user_clause = _in_clause(user_ids)
-                cursor.execute(f"DELETE FROM django_admin_log WHERE user_id IN ({user_clause})")
-                cursor.execute(f"DELETE FROM auth_user_groups WHERE user_id IN ({user_clause})")
-                cursor.execute(f"DELETE FROM auth_user_user_permissions WHERE user_id IN ({user_clause})")
-                cursor.execute(f"DELETE FROM auth_user WHERE id IN ({user_clause})")
+                cursor.execute(f"DELETE FROM auth_user WHERE id IN ({ucl})")
 
             cursor.execute(f"DELETE FROM tenants_tenant WHERE id = {tenant_id}")
-
-            try:
-                cursor.execute("PRAGMA foreign_keys = ON")
-            except Exception:
-                pass
 
         except Exception as e:
             logger.error(f"Failed to delete tenant {tenant_id}: {e}", exc_info=True)
