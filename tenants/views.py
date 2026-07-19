@@ -83,8 +83,8 @@ class TenantViewSet(viewsets.ModelViewSet):
             cursor.execute(f"DELETE FROM expenses_expense WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM expenses_expensecategory WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM registrations_registration WHERE tenant_id = {tenant_id}")
-            cursor.execute(f"DELETE FROM students_parent WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM students_student WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM students_parent WHERE tenant_id = {tenant_id}")
 
             cursor.execute(f"DELETE FROM subjects_teachersubject WHERE tenant_id = {tenant_id}")
             cursor.execute(f"DELETE FROM subjects_subject_cycle WHERE subject_id IN (SELECT id FROM subjects_subject WHERE tenant_id = {tenant_id})")
