@@ -500,7 +500,10 @@ const TenantManagement = () => {
       await tenantService.delete(deleteConfirm.id);
       setDeleteConfirm(null);
       load();
-    } catch { }
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Erreur inconnue';
+      alert('Erreur suppression: ' + msg);
+    }
   };
 
   const filtered = tenants.filter(t => {
