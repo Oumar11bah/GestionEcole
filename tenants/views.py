@@ -112,7 +112,11 @@ class TenantViewSet(viewsets.ModelViewSet):
             # 9. Users and tenant
             cursor.execute(f"UPDATE tenants_tenant SET created_by_id = NULL WHERE id = {tenant_id}")
             if user_ids:
-                cursor.execute(f"DELETE FROM auth_user WHERE id IN ({_in_clause(user_ids)})")
+                user_clause = _in_clause(user_ids)
+                cursor.execute(f"DELETE FROM django_admin_log WHERE user_id IN ({user_clause})")
+                cursor.execute(f"DELETE FROM auth_user_groups WHERE user_id IN ({user_clause})")
+                cursor.execute(f"DELETE FROM auth_user_user_permissions WHERE user_id IN ({user_clause})")
+                cursor.execute(f"DELETE FROM auth_user WHERE id IN ({user_clause})")
 
             cursor.execute(f"DELETE FROM tenants_tenant WHERE id = {tenant_id}")
 
