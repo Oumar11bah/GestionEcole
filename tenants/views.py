@@ -37,41 +37,40 @@ class TenantViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-            user_ids = [
-                r[0] for r in cursor.execute(
-                    f"SELECT u.id FROM auth_user u INNER JOIN accounts_userprofile p ON p.user_id = u.id WHERE p.tenant_id = {tenant_id}"
-                ).fetchall()
-            ]
+            cursor.execute(
+                f"SELECT u.id FROM auth_user u INNER JOIN accounts_userprofile p ON p.user_id = u.id WHERE p.tenant_id = {tenant_id}"
+            )
+            user_ids = [r[0] for r in cursor.fetchall()]
 
             def _in_clause(ids):
                 return ','.join(str(int(i)) for i in ids) if ids else '0'
 
-            payment_ids = [r[0] for r in cursor.execute(
-                f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}").fetchall()]
+            cursor.execute(f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}")
+            payment_ids = [r[0] for r in cursor.fetchall()]
             if payment_ids:
                 cursor.execute(f"DELETE FROM payments_paymenthistory WHERE payment_id IN ({_in_clause(payment_ids)})")
                 cursor.execute(f"DELETE FROM mobile_payments_mobilepaymenttransaction WHERE payment_id IN ({_in_clause(payment_ids)})")
 
-            student_ids = [r[0] for r in cursor.execute(
-                f"SELECT id FROM students_student WHERE tenant_id = {tenant_id}").fetchall()]
+            cursor.execute(f"SELECT id FROM students_student WHERE tenant_id = {tenant_id}")
+            student_ids = [r[0] for r in cursor.fetchall()]
             if student_ids:
                 cursor.execute(f"DELETE FROM grades_gradehistory WHERE grade_id IN (SELECT id FROM grades_grade WHERE student_id IN ({_in_clause(student_ids)}))")
                 cursor.execute(f"DELETE FROM grades_studentaverage WHERE student_id IN ({_in_clause(student_ids)})")
                 cursor.execute(f"DELETE FROM attendance_attendance WHERE student_id IN ({_in_clause(student_ids)})")
                 cursor.execute(f"DELETE FROM communication_notification WHERE related_student_id IN ({_in_clause(student_ids)})")
 
-            teacher_ids = [r[0] for r in cursor.execute(
-                f"SELECT id FROM teachers_teacher WHERE tenant_id = {tenant_id}").fetchall()]
+            cursor.execute(f"SELECT id FROM teachers_teacher WHERE tenant_id = {tenant_id}")
+            teacher_ids = [r[0] for r in cursor.fetchall()]
             if teacher_ids:
                 cursor.execute(f"DELETE FROM teachers_salaryhistory WHERE teacher_id IN ({_in_clause(teacher_ids)})")
 
-            class_ids = [r[0] for r in cursor.execute(
-                f"SELECT id FROM classes_class WHERE tenant_id = {tenant_id}").fetchall()]
+            cursor.execute(f"SELECT id FROM classes_class WHERE tenant_id = {tenant_id}")
+            class_ids = [r[0] for r in cursor.fetchall()]
             if class_ids:
                 cursor.execute(f"DELETE FROM payments_feetype_class_assigned WHERE class_id IN ({_in_clause(class_ids)})")
 
-            term_ids = [r[0] for r in cursor.execute(
-                f"SELECT id FROM grades_term WHERE tenant_id = {tenant_id}").fetchall()]
+            cursor.execute(f"SELECT id FROM grades_term WHERE tenant_id = {tenant_id}")
+            term_ids = [r[0] for r in cursor.fetchall()]
             if term_ids:
                 cursor.execute(f"DELETE FROM results_classresult WHERE term_id IN ({_in_clause(term_ids)})")
 
