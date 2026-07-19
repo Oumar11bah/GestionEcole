@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from .models import Tenant
 from .serializers import TenantSerializer, PublicTenantRegistrationSerializer, _generate_subdomain, _generate_license_key
+from accounts.models import UserProfile
 from accounts.permissions import IsSuperAdmin
 from accounts.utils import get_user_role
 
@@ -170,7 +171,12 @@ class TenantViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from .serializers import _generate_license_key
-        tenant = serializer.save(created_by=self.request.user, license_key=_generate_license_key())
+        tenant = serializer.save(
+            created_by=self.request.user,
+            license_key=_generate_license_key(),
+            is_pending=False,
+            is_active=True,
+        )
         # Create admin user for the new tenant
         admin_username = self.request.data.get('admin_username')
         admin_password = self.request.data.get('admin_password')
@@ -190,7 +196,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             )
             admin_user.is_active = True
             admin_user.save()
-            profile = admin_user.profile
+            profile, _ = UserProfile.objects.get_or_create(user=admin_user)
             profile.role = 'admin'
             profile.tenant = tenant
             profile.is_active = True
@@ -229,7 +235,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             first_name=data['admin_first_name'],
             last_name=data['admin_last_name'],
         )
-        profile = admin_user.profile
+        profile, _ = UserProfile.objects.get_or_create(user=admin_user)
         profile.role = 'admin'
         profile.tenant = tenant
         profile.is_active = True
