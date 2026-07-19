@@ -40,9 +40,25 @@ class TenantViewSet(viewsets.ModelViewSet):
                 cursor.execute(sql)
                 return [r[0] for r in cursor.fetchall()]
 
-            user_ids = fetch(
+            user_ids = set(fetch(
                 f"SELECT user_id FROM accounts_userprofile WHERE tenant_id = {tenant_id}"
-            )
+            ))
+            user_ids.update(fetch(
+                f"SELECT DISTINCT user_id FROM accounts_activitylog WHERE tenant_id = {tenant_id} AND user_id IS NOT NULL"
+            ))
+            user_ids.update(fetch(
+                f"SELECT DISTINCT user_id FROM dashboard_activitylog WHERE tenant_id = {tenant_id} AND user_id IS NOT NULL"
+            ))
+            user_ids.update(fetch(
+                f"SELECT DISTINCT sender_id FROM communication_message WHERE tenant_id = {tenant_id} AND sender_id IS NOT NULL"
+            ))
+            user_ids.update(fetch(
+                f"SELECT DISTINCT recipient_id FROM communication_message WHERE tenant_id = {tenant_id} AND recipient_id IS NOT NULL"
+            ))
+            user_ids.update(fetch(
+                f"SELECT DISTINCT recipient_id FROM communication_notification WHERE tenant_id = {tenant_id} AND recipient_id IS NOT NULL"
+            ))
+            user_ids = list(user_ids)
             ucl = _in(user_ids) if user_ids else '0'
 
             payment_ids = fetch(f"SELECT id FROM payments_payment WHERE tenant_id = {tenant_id}")
@@ -98,8 +114,12 @@ class TenantViewSet(viewsets.ModelViewSet):
             cursor.execute(f"DELETE FROM school_schoolinfo WHERE tenant_id = {tenant_id}")
 
             cursor.execute(f"DELETE FROM dashboard_statistic WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM dashboard_activitylog WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_activitylog WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_loginattempt WHERE tenant_id = {tenant_id}")
+            cursor.execute(f"DELETE FROM accounts_loginlockout WHERE tenant_id = {tenant_id}")
 
-            # Cascade-clean ALL rows referencing our users BEFORE deleting users
+            # Safety sweep: delete any remaining rows referencing our users
             if user_ids:
                 cursor.execute(f"DELETE FROM accounts_activitylog WHERE user_id IN ({ucl})")
                 cursor.execute(f"DELETE FROM accounts_loginattempt WHERE user_id IN ({ucl})")
