@@ -219,23 +219,29 @@ class TenantViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import ValidationError as DRFValidationError
         from .serializers import _generate_license_key
-        tenant = serializer.save(
-            created_by=self.request.user,
-            license_key=_generate_license_key(),
-            is_pending=False,
-            is_active=True,
-        )
-        # Create admin user for the new tenant
-        admin_username = self.request.data.get('admin_username')
-        admin_password = self.request.data.get('admin_password')
+
+        admin_username = self.request.data.get('admin_username', '').strip()
+        admin_password = self.request.data.get('admin_password', '')
         admin_email = self.request.data.get('admin_email', '')
         admin_first_name = self.request.data.get('admin_first_name', '')
         admin_last_name = self.request.data.get('admin_last_name', '')
 
-        if admin_username and admin_password:
-            if User.objects.filter(username=admin_username).exists():
-                return
+        if not admin_username or not admin_password:
+            raise DRFValidationError("Le nom d'utilisateur et le mot de passe de l'administrateur sont requis.")
+
+        if User.objects.filter(username=admin_username).exists():
+            raise DRFValidationError({"admin_username": "Ce nom d'utilisateur est déjà pris. Veuillez en choisir un autre."})
+
+        with transaction.atomic():
+            tenant = serializer.save(
+                created_by=self.request.user,
+                license_key=_generate_license_key(),
+                is_pending=False,
+                is_active=True,
+            )
+
             admin_user = User.objects.create_user(
                 username=admin_username,
                 email=admin_email,
@@ -250,6 +256,7 @@ class TenantViewSet(viewsets.ModelViewSet):
             profile.tenant = tenant
             profile.is_active = True
             profile.save()
+            logger.info(f"Created admin user '{admin_username}' for tenant {tenant.id} ({tenant.name})")
 
     @action(detail=False, methods=['post'])
     def register(self, request):
