@@ -231,8 +231,12 @@ class TenantViewSet(viewsets.ModelViewSet):
         if not admin_username or not admin_password:
             raise DRFValidationError("Le nom d'utilisateur et le mot de passe de l'administrateur sont requis.")
 
-        if User.objects.filter(username=admin_username).exists():
-            raise DRFValidationError({"admin_username": "Ce nom d'utilisateur est déjà pris. Veuillez en choisir un autre."})
+        existing_user = User.objects.filter(username=admin_username).first()
+        if existing_user:
+            if existing_user.is_superuser:
+                raise DRFValidationError({"admin_username": "Impossible de remplacer un super administrateur."})
+            logger.info(f"Deleting existing user '{admin_username}' (id={existing_user.id}) before recreating for new tenant")
+            existing_user.delete()
 
         with transaction.atomic():
             tenant = serializer.save(
